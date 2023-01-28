@@ -12,11 +12,12 @@ import (
 
 	"github.com/gologme/log"
 
-	"github.com/neilalexander/yggdrasilckr/src/config"
-	"github.com/yggdrasil-network/yggdrasil-go/src/address"
+	"github.com/RiV-chain/RiV-mesh/src/core"
+	"github.com/RiV-chain/RiVPN/src/config"
 )
 
 type cryptokey struct {
+	core    *core.Core
 	log     *log.Logger
 	config  *config.TunnelRoutingConfig
 	enabled atomic.Value // bool
@@ -76,7 +77,7 @@ func (c *cryptokey) addRemoteSubnet(cidr string, dest string) error {
 	if err != nil {
 		return err
 	}
-	if isYggdrasilDestination(prefix.Addr()) {
+	if c.isMeshDestination(prefix.Addr()) {
 		return errors.New("can't specify Yggdrasil destination as routed subnet")
 	}
 
@@ -143,7 +144,7 @@ func (c *cryptokey) getPublicKeyForAddress(addr netip.Addr) (ed25519.PublicKey, 
 	if !c.isEnabled() {
 		return nil, fmt.Errorf("CKR not enabled")
 	}
-	if isYggdrasilDestination(addr) {
+	if c.isMeshDestination(addr) {
 		return nil, fmt.Errorf("can't get public key for Yggdrasil route")
 	}
 
@@ -172,10 +173,10 @@ func (c *cryptokey) getPublicKeyForAddress(addr netip.Addr) (ed25519.PublicKey, 
 	return nil, fmt.Errorf("no route to %s", addr.String())
 }
 
-func isYggdrasilDestination(ip netip.Addr) bool {
-	var addr address.Address
-	var snet address.Subnet
+func (c *cryptokey) isMeshDestination(ip netip.Addr) bool {
+	var addr core.Address
+	var snet core.Subnet
 	copy(addr[:], ip.AsSlice())
 	copy(snet[:], ip.AsSlice())
-	return addr.IsValid() || snet.IsValid()
+	return c.core.IsValidAddress(addr) || c.core.IsValidSubnet(snet)
 }

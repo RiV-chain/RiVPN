@@ -1,6 +1,6 @@
 package config
 
-import "github.com/yggdrasil-network/yggdrasil-go/src/config"
+import "github.com/RiV-chain/RiV-mesh/src/config"
 
 type NodeConfig struct {
 	*config.NodeConfig

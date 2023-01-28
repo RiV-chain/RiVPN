@@ -19,29 +19,28 @@ import (
 
 	"golang.org/x/text/encoding/unicode"
 
+	"github.com/RiV-chain/RiVPN/src/ckriprwc"
+	"github.com/RiV-chain/RiVPN/src/config"
+	"github.com/RiV-chain/RiVPN/src/tun"
 	"github.com/gologme/log"
 	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hjson/hjson-go"
 	"github.com/kardianos/minwinsvc"
 	"github.com/mitchellh/mapstructure"
-	"github.com/neilalexander/yggdrasilckr/src/ckriprwc"
-	"github.com/neilalexander/yggdrasilckr/src/config"
-	"github.com/neilalexander/yggdrasilckr/src/tun"
 
-	"github.com/yggdrasil-network/yggdrasil-go/src/address"
-	"github.com/yggdrasil-network/yggdrasil-go/src/admin"
-	"github.com/yggdrasil-network/yggdrasil-go/src/defaults"
+	"github.com/RiV-chain/RiV-mesh/src/defaults"
+	"github.com/RiV-chain/RiV-mesh/src/restapi"
 
-	"github.com/yggdrasil-network/yggdrasil-go/src/core"
-	"github.com/yggdrasil-network/yggdrasil-go/src/multicast"
-	"github.com/yggdrasil-network/yggdrasil-go/src/version"
+	"github.com/RiV-chain/RiV-mesh/src/core"
+	"github.com/RiV-chain/RiV-mesh/src/multicast"
+	"github.com/RiV-chain/RiV-mesh/src/version"
 )
 
 type node struct {
-	core      *core.Core
-	tun       *tun.TunAdapter
-	multicast *multicast.Multicast
-	admin     *admin.AdminSocket
+	core        *core.Core
+	tun         *tun.TunAdapter
+	multicast   *multicast.Multicast
+	rest_server *restapi.RestServer
 }
 
 func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf bool) *config.NodeConfig {
@@ -143,7 +142,7 @@ func setLogLevel(loglevel string, logger *log.Logger) {
 	}
 }
 
-type yggArgs struct {
+type rivArgs struct {
 	genconf       bool
 	useconf       bool
 	normaliseconf bool
@@ -155,9 +154,11 @@ type yggArgs struct {
 	useconffile   string
 	logto         string
 	loglevel      string
+	httpaddress   string
+	wwwroot       string
 }
 
-func getArgs() yggArgs {
+func getArgs() rivArgs {
 	genconf := flag.Bool("genconf", false, "print a new config to stdout")
 	useconf := flag.Bool("useconf", false, "read HJSON/JSON config from stdin")
 	useconffile := flag.String("useconffile", "", "read HJSON/JSON config from specified file path")
@@ -169,8 +170,11 @@ func getArgs() yggArgs {
 	getaddr := flag.Bool("address", false, "returns the IPv6 address as derived from the supplied configuration")
 	getsnet := flag.Bool("subnet", false, "returns the IPv6 subnet as derived from the supplied configuration")
 	loglevel := flag.String("loglevel", "info", "loglevel to enable")
+	httpaddress := flag.String("httpaddress", "", "httpaddress to enable")
+	wwwroot := flag.String("wwwroot", "", "wwwroot to enable")
+
 	flag.Parse()
-	return yggArgs{
+	return rivArgs{
 		genconf:       *genconf,
 		useconf:       *useconf,
 		useconffile:   *useconffile,
@@ -182,11 +186,13 @@ func getArgs() yggArgs {
 		getaddr:       *getaddr,
 		getsnet:       *getsnet,
 		loglevel:      *loglevel,
+		httpaddress:   *httpaddress,
+		wwwroot:       *wwwroot,
 	}
 }
 
 // The main function is responsible for configuring and starting Yggdrasil.
-func run(args yggArgs, ctx context.Context) {
+func run(args rivArgs, ctx context.Context) {
 	// Create a new logger that logs output to stdout.
 	var logger *log.Logger
 	switch args.logto {
@@ -259,6 +265,9 @@ func run(args yggArgs, ctx context.Context) {
 	if cfg == nil {
 		return
 	}
+
+	n := &node{}
+
 	// Have we been asked for the node address yet? If so, print it and then stop.
 	getNodeKey := func() ed25519.PublicKey {
 		if pubkey, err := hex.DecodeString(cfg.PrivateKey); err == nil {
@@ -269,14 +278,14 @@ func run(args yggArgs, ctx context.Context) {
 	switch {
 	case args.getaddr:
 		if key := getNodeKey(); key != nil {
-			addr := address.AddrForKey(key)
+			addr := n.core.AddrForKey(key)
 			ip := net.IP(addr[:])
 			fmt.Println(ip.String())
 		}
 		return
 	case args.getsnet:
 		if key := getNodeKey(); key != nil {
-			snet := address.SubnetForKey(key)
+			snet := n.core.SubnetForKey(key)
 			ipnet := net.IPNet{
 				IP:   append(snet[:], 0, 0, 0, 0, 0, 0, 0, 0),
 				Mask: net.CIDRMask(len(snet)*8, 128),
@@ -285,8 +294,6 @@ func run(args yggArgs, ctx context.Context) {
 		}
 		return
 	}
-
-	n := &node{}
 
 	// Setup the Yggdrasil node itself.
 	{
@@ -297,6 +304,7 @@ func run(args yggArgs, ctx context.Context) {
 		options := []core.SetupOption{
 			core.NodeInfo(cfg.NodeInfo),
 			core.NodeInfoPrivacy(cfg.NodeInfoPrivacy),
+			core.NetworkDomain(cfg.NetworkDomain),
 		}
 		for _, addr := range cfg.Listen {
 			options = append(options, core.ListenAddress(addr))
@@ -321,35 +329,48 @@ func run(args yggArgs, ctx context.Context) {
 		}
 	}
 
-	// Setup the admin socket.
-	{
-		options := []admin.SetupOption{
-			admin.ListenAddress(cfg.AdminListen),
-		}
-		if n.admin, err = admin.New(n.core, logger, options...); err != nil {
-			panic(err)
-		}
-		if n.admin != nil {
-			n.admin.SetupAdminHandlers()
-		}
-	}
-
 	// Setup the multicast module.
 	{
 		options := []multicast.SetupOption{}
 		for _, intf := range cfg.MulticastInterfaces {
 			options = append(options, multicast.MulticastInterface{
-				Regex:  regexp.MustCompile(intf.Regex),
-				Beacon: intf.Beacon,
-				Listen: intf.Listen,
-				Port:   intf.Port,
+				Regex:    regexp.MustCompile(intf.Regex),
+				Beacon:   intf.Beacon,
+				Listen:   intf.Listen,
+				Port:     intf.Port,
+				Priority: uint8(intf.Priority),
 			})
 		}
 		if n.multicast, err = multicast.New(n.core, logger, options...); err != nil {
-			panic(err)
+			fmt.Println("Multicast module fail:", err)
 		}
-		if n.admin != nil && n.multicast != nil {
-			n.multicast.SetupAdminHandlers(n.admin)
+	}
+
+	// Setup the REST socket.
+	{
+		//override httpaddress and wwwroot parameters in cfg
+		if len(cfg.HttpAddress) == 0 {
+			cfg.HttpAddress = args.httpaddress
+		}
+		if len(cfg.WwwRoot) == 0 {
+			cfg.WwwRoot = args.wwwroot
+		}
+
+		if n.rest_server, err = restapi.NewRestServer(restapi.RestServerCfg{
+			Core:          n.core,
+			Multicast:     n.multicast,
+			Log:           logger,
+			ListenAddress: cfg.HttpAddress,
+			WwwRoot:       cfg.WwwRoot,
+			ConfigFn:      args.useconffile,
+			Features:      []string{"vpn"},
+		}); err != nil {
+			logger.Errorln(err)
+		} else {
+			err = n.rest_server.Serve()
+			if err != nil {
+				logger.Errorln(err)
+			}
 		}
 	}
 
@@ -362,11 +383,8 @@ func run(args yggArgs, ctx context.Context) {
 
 		// TODO: refactor this!
 		rwc := ckriprwc.NewReadWriteCloser(n.core, cfg, logger)
-		if n.tun, err = tun.New(rwc, logger, options...); err != nil {
+		if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
 			panic(err)
-		}
-		if n.admin != nil && n.tun != nil {
-			n.tun.SetupAdminHandlers(n.admin)
 		}
 	}
 
@@ -383,10 +401,10 @@ func run(args yggArgs, ctx context.Context) {
 	<-ctx.Done()
 
 	// Shut down the node.
-	_ = n.admin.Stop()
 	_ = n.multicast.Stop()
 	_ = n.tun.Stop()
 	n.core.Stop()
+	n.rest_server.Shutdown()
 }
 
 func main() {

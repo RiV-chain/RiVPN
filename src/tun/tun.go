@@ -11,12 +11,11 @@ import (
 	"net"
 
 	"github.com/Arceliar/phony"
-	"github.com/neilalexander/yggdrasilckr/src/ckriprwc"
+	"github.com/RiV-chain/RiVPN/src/ckriprwc"
 	"golang.zx2c4.com/wireguard/tun"
 
-	"github.com/yggdrasil-network/yggdrasil-go/src/address"
-	"github.com/yggdrasil-network/yggdrasil-go/src/core"
-	"github.com/yggdrasil-network/yggdrasil-go/src/defaults"
+	"github.com/RiV-chain/RiV-mesh/src/core"
+	"github.com/RiV-chain/RiV-mesh/src/defaults"
 )
 
 type MTU uint16
@@ -26,10 +25,11 @@ type MTU uint16
 // should pass this object to the yggdrasil.SetRouterAdapter() function before
 // calling yggdrasil.Start().
 type TunAdapter struct {
+	core        *core.Core
 	rwc         *ckriprwc.ReadWriteCloser
 	log         core.Logger
-	addr        address.Address
-	subnet      address.Subnet
+	addr        core.Address
+	subnet      core.Subnet
 	mtu         uint64
 	iface       tun.Device
 	phony.Inbox // Currently only used for _handlePacket from the reader, TODO: all the stuff that currently needs a mutex below
@@ -90,10 +90,11 @@ func MaximumMTU() uint64 {
 
 // Init initialises the TUN module. You must have acquired a Listener from
 // the Yggdrasil core before this point and it must not be in use elsewhere.
-func New(rwc *ckriprwc.ReadWriteCloser, log core.Logger, opts ...SetupOption) (*TunAdapter, error) {
+func New(core *core.Core, rwc *ckriprwc.ReadWriteCloser, log core.Logger, opts ...SetupOption) (*TunAdapter, error) {
 	tun := &TunAdapter{
-		rwc: rwc,
-		log: log,
+		core: core,
+		rwc:  rwc,
+		log:  log,
 	}
 	for _, opt := range opts {
 		tun._applyOption(opt)
@@ -107,7 +108,7 @@ func (tun *TunAdapter) _start() error {
 	}
 	tun.addr = tun.rwc.Address()
 	tun.subnet = tun.rwc.Subnet()
-	addr := fmt.Sprintf("%s/%d", net.IP(tun.addr[:]).String(), 8*len(address.GetPrefix())-1)
+	addr := fmt.Sprintf("%s/%d", net.IP(tun.addr[:]).String(), 8*len(tun.core.GetPrefix())-1)
 	if tun.config.name == "none" || tun.config.name == "dummy" {
 		tun.log.Debugln("Not starting TUN as ifname is none or dummy")
 		tun.isEnabled = false
