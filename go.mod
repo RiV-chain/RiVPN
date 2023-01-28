@@ -16,6 +16,7 @@ require (
 	golang.org/x/net v0.1.0
 	golang.org/x/sys v0.1.0
 	golang.org/x/text v0.4.0
+	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224
 	golang.zx2c4.com/wireguard v0.0.0-20211017052713-f87e87af0d9a
 	golang.zx2c4.com/wireguard/windows v0.5.3
 )
