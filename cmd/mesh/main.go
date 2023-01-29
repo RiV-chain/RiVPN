@@ -29,7 +29,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/RiV-chain/RiV-mesh/src/defaults"
-	"github.com/RiV-chain/RiV-mesh/src/restapi"
+	api "github.com/RiV-chain/RiV-mesh/src/restapi"
+	r "github.com/RiV-chain/RiVPN/src/restapi"
 
 	"github.com/RiV-chain/RiV-mesh/src/core"
 	"github.com/RiV-chain/RiV-mesh/src/multicast"
@@ -40,7 +41,7 @@ type node struct {
 	core        *core.Core
 	tun         *tun.TunAdapter
 	multicast   *multicast.Multicast
-	rest_server *restapi.RestServer
+	rest_server *api.RestServer
 }
 
 func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf bool) *config.NodeConfig {
@@ -295,7 +296,7 @@ func run(args rivArgs, ctx context.Context) {
 		return
 	}
 
-	// Setup the Yggdrasil node itself.
+	// Setup the RiV-mesh node itself.
 	{
 		sk, err := hex.DecodeString(cfg.PrivateKey)
 		if err != nil {
@@ -306,6 +307,7 @@ func run(args rivArgs, ctx context.Context) {
 			core.NodeInfoPrivacy(cfg.NodeInfoPrivacy),
 			core.NetworkDomain(cfg.NetworkDomain),
 		}
+
 		for _, addr := range cfg.Listen {
 			options = append(options, core.ListenAddress(addr))
 		}
@@ -355,8 +357,7 @@ func run(args rivArgs, ctx context.Context) {
 		if len(cfg.WwwRoot) == 0 {
 			cfg.WwwRoot = args.wwwroot
 		}
-
-		if n.rest_server, err = restapi.NewRestServer(restapi.RestServerCfg{
+		options := api.RestServerCfg{
 			Core:          n.core,
 			Multicast:     n.multicast,
 			Log:           logger,
@@ -364,12 +365,17 @@ func run(args rivArgs, ctx context.Context) {
 			WwwRoot:       cfg.WwwRoot,
 			ConfigFn:      args.useconffile,
 			Features:      []string{"vpn"},
-		}); err != nil {
+		}
+		if n.rest_server, err = api.NewRestServer(options); err != nil {
 			logger.Errorln(err)
 		} else {
-			err = n.rest_server.Serve()
-			if err != nil {
+			if rest_server, err := r.NewRestServer(n.rest_server, cfg); err != nil {
 				logger.Errorln(err)
+			} else {
+				err = rest_server.Serve()
+				if err != nil {
+					logger.Errorln(err)
+				}
 			}
 		}
 	}
