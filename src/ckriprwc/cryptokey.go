@@ -78,7 +78,7 @@ func (c *cryptokey) addRemoteSubnet(cidr string, dest string) error {
 		return err
 	}
 	if c.isMeshDestination(prefix.Addr()) {
-		return errors.New("can't specify Yggdrasil destination as routed subnet")
+		return errors.New("can't specify RiV-mesh destination as routed subnet")
 	}
 
 	c.Lock()

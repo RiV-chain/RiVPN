@@ -61,6 +61,7 @@ func (k *keyStore) init(c *core.Core, cfg *config.NodeConfig, log *log.Logger) {
 	k.core = c
 	k.log = log
 	k.ckr = &cryptokey{
+		core:   c,
 		config: &cfg.TunnelRoutingConfig,
 		log:    log,
 	}
