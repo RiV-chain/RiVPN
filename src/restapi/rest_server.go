@@ -29,7 +29,7 @@ func NewRestServer(server *restapi.RestServer, cfg *config.NodeConfig) (*restapi
 // @Success		200		{string}	string		"ok"
 // @Failure		400		{error}		error		"Method not allowed"
 // @Failure		401		{error}		error		"Authentication failed"
-// @Router		/api/tunnelrouting [get]
+// @Router		/tunnelrouting [get]
 func (a *RestServer) getApiTunnelRouting(w http.ResponseWriter, r *http.Request) {
 	restapi.WriteJson(w, r, a.config.TunnelRoutingConfig)
 }
