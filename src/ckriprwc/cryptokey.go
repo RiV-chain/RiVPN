@@ -27,7 +27,7 @@ type cryptokey struct {
 }
 
 type route struct {
-	prefix      netip.Prefix
+	Prefix      netip.Prefix
 	destination ed25519.PublicKey
 }
 
@@ -87,14 +87,14 @@ func (c *cryptokey) addRemoteSubnet(cidr string, dest string) error {
 	switch {
 	case prefix.Addr().Is6():
 		for _, route := range c.v6Routes {
-			if route.prefix == prefix {
+			if route.Prefix == prefix {
 				return fmt.Errorf("remote subnet already exists for %s", cidr)
 			}
 		}
 
 	case prefix.Addr().Is4():
 		for _, route := range c.v4Routes {
-			if route.prefix == prefix {
+			if route.Prefix == prefix {
 				return fmt.Errorf("remote subnet already exists for %s", cidr)
 			}
 		}
@@ -114,21 +114,21 @@ func (c *cryptokey) addRemoteSubnet(cidr string, dest string) error {
 		switch {
 		case prefix.Addr().Is6():
 			c.v6Routes = append(c.v6Routes, &route{
-				prefix:      prefix,
+				Prefix:      prefix,
 				destination: destination,
 			})
 			sort.Slice(c.v6Routes, func(i, j int) bool {
-				return c.v6Routes[i].prefix.Bits() > c.v6Routes[j].prefix.Bits()
+				return c.v6Routes[i].Prefix.Bits() > c.v6Routes[j].Prefix.Bits()
 			})
 			c.log.Infoln("Added routed IPv6 subnet", cidr)
 
 		case prefix.Addr().Is4():
 			c.v4Routes = append(c.v4Routes, &route{
-				prefix:      prefix,
+				Prefix:      prefix,
 				destination: destination,
 			})
 			sort.Slice(c.v4Routes, func(i, j int) bool {
-				return c.v4Routes[i].prefix.Bits() > c.v4Routes[j].prefix.Bits()
+				return c.v4Routes[i].Prefix.Bits() > c.v4Routes[j].Prefix.Bits()
 			})
 			c.log.Infoln("Added routed IPv4 subnet", cidr)
 		}
@@ -154,14 +154,14 @@ func (c *cryptokey) getPublicKeyForAddress(addr netip.Addr) (ed25519.PublicKey, 
 	switch {
 	case addr.Is6():
 		for _, route := range c.v6Routes {
-			if route.prefix.Contains(addr) {
+			if route.Prefix.Contains(addr) {
 				return route.destination, nil
 			}
 		}
 
 	case addr.Is4():
 		for _, route := range c.v4Routes {
-			if route.prefix.Contains(addr) {
+			if route.Prefix.Contains(addr) {
 				return route.destination, nil
 			}
 		}
