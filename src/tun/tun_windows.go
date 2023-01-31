@@ -63,6 +63,7 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 		if mtu, err := iface.MTU(); err == nil {
 			tun.mtu = uint64(mtu)
 		}
+		
 		return nil
 	})
 }
@@ -78,7 +79,6 @@ func (tun *TunAdapter) setupMTU(mtu uint64) error {
 		if err != nil {
 			return err
 		}
-
 		ipfamily.NLMTU = uint32(mtu)
 		intf.ForceMTU(int(ipfamily.NLMTU))
 		ipfamily.UseAutomaticMetric = false
@@ -90,7 +90,14 @@ func (tun *TunAdapter) setupMTU(mtu uint64) error {
 			return err
 		}
 	}
-
+	v4err := tun.setupV4Routes()
+	v6err := tun.setupV6Routes()
+	if v4err != nil {
+		return v4err
+	}
+	if v6err != nil {
+		return v6err
+	}
 	return nil
 }
 
@@ -103,7 +110,6 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		if address, err := netip.ParsePrefix(addr); err == nil {
 			luid := winipcfg.LUID(intf.LUID())
 			addresses := []netip.Prefix{address}
-
 			err := luid.SetIPAddressesForFamily(windows.AF_INET6, addresses)
 			if err == windows.ERROR_OBJECT_ALREADY_EXISTS {
 				cleanupAddressesOnDisconnectedInterfaces(windows.AF_INET6, addresses)
@@ -120,6 +126,39 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	}
 	return nil
 }
+
+func (tun *TunAdapter) setupV4Routes() error {
+	if intf, ok := tun.iface.(*wgtun.NativeTun); ok {
+		luid := winipcfg.LUID(intf.LUID())
+		for _, r := range tun.rwc.V4Routes() {
+			ip, ok := netip.AddrFromSlice(tun.addr[:])
+			if !ok {
+				errors.New("invalid tun address TUN")
+			}
+			luid.AddRoute(r.Prefix, ip, 99)
+		}
+	} else {
+		return errors.New("unable to get native TUN")
+	}
+	return nil
+}
+
+func (tun *TunAdapter) setupV6Routes() error {
+	if intf, ok := tun.iface.(*wgtun.NativeTun); ok {
+		luid := winipcfg.LUID(intf.LUID())
+		for _, r := range tun.rwc.V6Routes() {
+			ip, ok := netip.AddrFromSlice(tun.addr[:])
+			if !ok {
+				errors.New("invalid tun address TUN")
+			}
+			luid.AddRoute(r.Prefix, ip, 99)
+		}
+	} else {
+		return errors.New("unable to get native TUN")
+	}
+	return nil
+}
+
 
 /*
  * cleanupAddressesOnDisconnectedInterfaces

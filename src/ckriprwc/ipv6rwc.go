@@ -378,6 +378,14 @@ func (rwc *ReadWriteCloser) Subnet() core.Subnet {
 	return rwc.subnet
 }
 
+func (rwc *ReadWriteCloser) V4Routes() []*route {
+	return rwc.ckr.v4Routes
+}
+
+func (rwc *ReadWriteCloser) V6Routes() []*route {
+	return rwc.ckr.v6Routes
+}
+
 func (rwc *ReadWriteCloser) Read(p []byte) (n int, err error) {
 	return rwc.readPC(p)
 }

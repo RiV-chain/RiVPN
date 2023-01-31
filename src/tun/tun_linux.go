@@ -6,6 +6,8 @@ package tun
 // The linux platform specific tun parts
 
 import (
+	"net"
+
 	"github.com/vishvananda/netlink"
 	wgtun "golang.zx2c4.com/wireguard/tun"
 )
@@ -25,7 +27,22 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 	} else {
 		tun.mtu = 0
 	}
-	return tun.setupAddress(addr)
+	if err := tun.setupAddress(addr); err != nil {
+		return err
+	}
+	if link, err := netlink.LinkByName(tun.Name()); err != nil {
+		return err
+	} else {
+		v4err := tun.setupV4Routes(link)
+		v6err := tun.setupV6Routes(link)
+		if v4err != nil {
+			return v4err
+		}
+		if v6err != nil {
+			return v6err
+		}
+	}
+	return nil
 }
 
 // Configures the TUN adapter with the correct IPv6 address and MTU. Netlink
@@ -54,5 +71,39 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	tun.log.Infof("Interface name: %s", tun.Name())
 	tun.log.Infof("Interface IPv6: %s", addr)
 	tun.log.Infof("Interface MTU: %d", tun.mtu)
+	return nil
+}
+
+func (tun *TunAdapter) setupV4Routes(link netlink.Link) error {
+	ip := net.IPv4(127, 1, 1, 1)
+	for _, r := range tun.rwc.V4Routes() {
+		route := &netlink.Route{
+			LinkIndex: link.Attrs().Index,
+			Dst: &net.IPNet{
+				IP:   net.IP(r.Prefix.Addr().AsSlice()),
+				Mask: net.CIDRMask(r.Prefix.Masked().Bits(), 32),
+			},
+			Src: ip,
+		}
+		if err := netlink.RouteAdd(route); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (tun *TunAdapter) setupV6Routes(link netlink.Link) error {
+	for _, r := range tun.rwc.V6Routes() {
+		route := &netlink.Route{
+			LinkIndex: link.Attrs().Index,
+			Dst: &net.IPNet{
+				IP:   net.IP(r.Prefix.Addr().AsSlice()),
+				Mask: net.CIDRMask(r.Prefix.Masked().Bits(), 128),
+			},
+		}
+		if err := netlink.RouteAdd(route); err != nil {
+			return err
+		}
+	}
 	return nil
 }
