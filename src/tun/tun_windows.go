@@ -133,8 +133,9 @@ func (tun *TunAdapter) setupV4Routes() error {
 		for _, r := range tun.rwc.V4Routes() {
 			ip, ok := netip.AddrFromSlice(tun.addr[:])
 			if !ok {
-				errors.New("invalid tun address TUN")
+				return errors.New("invalid tun address TUN")
 			}
+			tun.log.Infoln("Added nexthop address:", ip.String())
 			luid.AddRoute(r.Prefix, ip, 99)
 		}
 	} else {
@@ -149,8 +150,9 @@ func (tun *TunAdapter) setupV6Routes() error {
 		for _, r := range tun.rwc.V6Routes() {
 			ip, ok := netip.AddrFromSlice(tun.addr[:])
 			if !ok {
-				errors.New("invalid tun address TUN")
+				return errors.New("invalid tun address TUN")
 			}
+			tun.log.Infoln("Added nexthop address:", ip.String())
 			luid.AddRoute(r.Prefix, ip, 99)
 		}
 	} else {
