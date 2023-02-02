@@ -145,7 +145,7 @@ func (c *cryptokey) getPublicKeyForAddress(addr netip.Addr) (ed25519.PublicKey, 
 		return nil, fmt.Errorf("CKR not enabled")
 	}
 	if c.isMeshDestination(addr) {
-		return nil, fmt.Errorf("can't get public key for Yggdrasil route")
+		return nil, fmt.Errorf("can't get public key for RiV-mesh route")
 	}
 
 	c.RLock()
