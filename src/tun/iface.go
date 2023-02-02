@@ -32,7 +32,7 @@ func (tun *TunAdapter) write() {
 		tun.log.Infoln("Write TUN:", n)
 		if err != nil {
 			tun.log.Errorln("Exiting tun writer due to core read error:", err)
-			return
+			//return
 		}
 		if !tun.isEnabled {
 			continue // Nothing to do, the tun isn't enabled
