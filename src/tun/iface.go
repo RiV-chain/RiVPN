@@ -6,7 +6,6 @@ func (tun *TunAdapter) read() {
 	var buf [TUN_OFFSET_BYTES + 65535]byte
 	for {
 		n, err := tun.iface.Read(buf[:], TUN_OFFSET_BYTES)
-		tun.log.Infoln("Read TUN:", n)
 		if n <= TUN_OFFSET_BYTES || err != nil {
 			tun.log.Errorln("Error reading TUN:", err)
 			ferr := tun.iface.Flush()
@@ -29,7 +28,6 @@ func (tun *TunAdapter) write() {
 	for {
 		bs := buf[TUN_OFFSET_BYTES:]
 		n, err := tun.rwc.Read(bs)
-		tun.log.Infoln("Write TUN:", n)
 		if err != nil {
 			tun.log.Errorln("Exiting tun writer due to core read error:", err)
 			return

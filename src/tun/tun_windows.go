@@ -6,12 +6,11 @@ package tun
 import (
 	"errors"
 
+	"golang.org/x/sys/windows"
 	"log"
 	"net/netip"
 	"time"
 	_ "unsafe"
-
-	"golang.org/x/sys/windows"
 
 	"golang.zx2c4.com/wintun"
 	wgtun "golang.zx2c4.com/wireguard/tun"
@@ -64,7 +63,7 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 		if mtu, err := iface.MTU(); err == nil {
 			tun.mtu = uint64(mtu)
 		}
-
+		
 		return nil
 	})
 }
@@ -122,15 +121,6 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		} else {
 			return err
 		}
-		/*
-			if addressv4, err := netip.ParsePrefix("10.10.10.10/24"); err == nil {
-				luid := winipcfg.LUID(intf.LUID())
-				addresses := []netip.Prefix{addressv4}
-				err := luid.SetIPAddressesForFamily(windows.AF_INET, addresses)
-				if err != nil {
-					return err
-				}
-			}*/
 	} else {
 		return errors.New("unable to get native TUN")
 	}
@@ -170,6 +160,7 @@ func (tun *TunAdapter) setupV6Routes() error {
 	}
 	return nil
 }
+
 
 /*
  * cleanupAddressesOnDisconnectedInterfaces
