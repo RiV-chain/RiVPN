@@ -107,7 +107,7 @@ func (k *keyStore) sendToAddress(addr core.Address, bs []byte) {
 			}
 		})
 		k.mutex.Unlock()
-		k.sendKeyLookup(k.core.PublicKey())
+		k.sendKeyLookup(k.core.GetAddressKey(addr))
 	}
 }
 
@@ -136,7 +136,7 @@ func (k *keyStore) sendToSubnet(subnet core.Subnet, bs []byte) {
 			}
 		})
 		k.mutex.Unlock()
-		k.sendKeyLookup(k.core.PublicKey())
+		k.sendKeyLookup(k.core.GetSubnetKey(subnet))
 	}
 }
 
