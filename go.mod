@@ -12,7 +12,7 @@ require (
 	github.com/kardianos/minwinsvc v1.0.2
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/mobile v0.0.0-20221012134814-c746ac228303
+	golang.org/x/mobile v0.0.0-20221110043201-43a038452099
 	golang.org/x/net v0.1.0
 	golang.org/x/sys v0.1.0
 	golang.org/x/text v0.4.0
