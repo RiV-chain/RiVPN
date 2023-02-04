@@ -37,7 +37,3 @@ gomobile bind -target android -tags mobile -o mesh.aar \
 ```
 
 The main change from the old tunnel routing/CKR support in v0.3 is that you don't need to specify source subnets. Filtering will automatically be applied based on your remote subnets, therefore you'll need to specify the correct remote subnets on both sides.
-
-## Warning
-
-This is provided without any warranty whatsoever and should be considered to be completely unsupported. Don't yell at me if it doesn't work.
