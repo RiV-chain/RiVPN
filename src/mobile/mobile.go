@@ -19,12 +19,12 @@ import (
 	_ "golang.org/x/mobile/bind"
 )
 
-// Yggdrasil mobile package is meant to "plug the gap" for mobile support, as
+// Mesh mobile package is meant to "plug the gap" for mobile support, as
 // Gomobile will not create headers for Swift/Obj-C etc if they have complex
 // (non-native) types. Therefore for iOS we will expose some nice simple
 // functions. Note that in the case of iOS we handle reading/writing to/from TUN
 // in Swift therefore we use the "dummy" TUN interface instead.
-type Yggdrasil struct {
+type Mesh struct {
 	core      *core.Core
 	iprwc     *ckriprwc.ReadWriteCloser
 	config    *config.NodeConfig
@@ -33,13 +33,13 @@ type Yggdrasil struct {
 }
 
 // StartAutoconfigure starts a node with a randomly generated config
-func (m *Yggdrasil) StartAutoconfigure() error {
+func (m *Mesh) StartAutoconfigure() error {
 	return m.StartJSON([]byte("{}"))
 }
 
 // StartJSON starts a node with the given JSON config. You can get JSON config
 // (rather than HJSON) by using the GenerateConfigJSON() function
-func (m *Yggdrasil) StartJSON(configjson []byte) error {
+func (m *Mesh) StartJSON(configjson []byte) error {
 	logger := log.New(m.log, "", 0)
 	logger.EnableLevel("error")
 	logger.EnableLevel("warn")
@@ -50,7 +50,7 @@ func (m *Yggdrasil) StartJSON(configjson []byte) error {
 	if err := json.Unmarshal(configjson, &m.config); err != nil {
 		return err
 	}
-	// Setup the Yggdrasil node itself.
+	// Setup the RiV-mesh node itself.
 	{
 		sk, err := hex.DecodeString(m.config.PrivateKey)
 		if err != nil {
@@ -105,9 +105,9 @@ func (m *Yggdrasil) StartJSON(configjson []byte) error {
 	return nil
 }
 
-// Send sends a packet to Yggdrasil. It should be a fully formed
+// Send sends a packet to RiV-mesh. It should be a fully formed
 // IPv6 packet
-func (m *Yggdrasil) Send(p []byte) error {
+func (m *Mesh) Send(p []byte) error {
 	if m.iprwc == nil {
 		return nil
 	}
@@ -115,9 +115,9 @@ func (m *Yggdrasil) Send(p []byte) error {
 	return nil
 }
 
-// Recv waits for and reads a packet coming from Yggdrasil. It
+// Recv waits for and reads a packet coming from RiV-mesh. It
 // will be a fully formed IPv6 packet
-func (m *Yggdrasil) Recv() ([]byte, error) {
+func (m *Mesh) Recv() ([]byte, error) {
 	if m.iprwc == nil {
 		return nil, nil
 	}
@@ -126,11 +126,11 @@ func (m *Yggdrasil) Recv() ([]byte, error) {
 	return buf[:n], nil
 }
 
-// Stop the mobile Yggdrasil instance
-func (m *Yggdrasil) Stop() error {
+// Stop the mobile RiV-mesh instance
+func (m *Mesh) Stop() error {
 	logger := log.New(m.log, "", 0)
 	logger.EnableLevel("info")
-	logger.Infof("Stop the mobile Yggdrasil instance %s", "")
+	logger.Infof("Stop the mobile RiV-mesh instance %s", "")
 	if err := m.multicast.Stop(); err != nil {
 		return err
 	}
@@ -149,34 +149,34 @@ func GenerateConfigJSON() []byte {
 }
 
 // GetAddressString gets the node's IPv6 address
-func (m *Yggdrasil) GetAddressString() string {
+func (m *Mesh) GetAddressString() string {
 	ip := m.core.Address()
 	return ip.String()
 }
 
 // GetSubnetString gets the node's IPv6 subnet in CIDR notation
-func (m *Yggdrasil) GetSubnetString() string {
+func (m *Mesh) GetSubnetString() string {
 	subnet := m.core.Subnet()
 	return subnet.String()
 }
 
 // GetPublicKeyString gets the node's public key in hex form
-func (m *Yggdrasil) GetPublicKeyString() string {
+func (m *Mesh) GetPublicKeyString() string {
 	return hex.EncodeToString(m.core.GetSelf().Key)
 }
 
 // GetCoordsString gets the node's coordinates
-func (m *Yggdrasil) GetCoordsString() string {
+func (m *Mesh) GetCoordsString() string {
 	return fmt.Sprintf("%v", m.core.GetSelf().Coords)
 }
 
-func (m *Yggdrasil) GetPeersJSON() (result string) {
+func (m *Mesh) GetPeersJSON() (result string) {
 	peers := []struct {
 		core.PeerInfo
 		IP string
 	}{}
 	for _, v := range m.core.GetPeers() {
-		a := address.AddrForKey(v.Key)
+		a := m.core.AddrForKey(v.Key)
 		ip := net.IP(a[:]).String()
 		peers = append(peers, struct {
 			core.PeerInfo
@@ -193,7 +193,7 @@ func (m *Yggdrasil) GetPeersJSON() (result string) {
 	}
 }
 
-func (m *Yggdrasil) GetDHTJSON() (result string) {
+func (m *Mesh) GetDHTJSON() (result string) {
 	if res, err := json.Marshal(m.core.GetDHT()); err == nil {
 		return string(res)
 	} else {
@@ -202,7 +202,7 @@ func (m *Yggdrasil) GetDHTJSON() (result string) {
 }
 
 // GetMTU returns the configured node MTU. This must be called AFTER Start.
-func (m *Yggdrasil) GetMTU() int {
+func (m *Mesh) GetMTU() int {
 	return int(m.core.MTU())
 }
 
