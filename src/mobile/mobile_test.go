@@ -2,7 +2,7 @@ package mobile
 
 import "testing"
 
-func TestStartYggdrasil(t *testing.T) {
+func TestStartMesh(t *testing.T) {
 	riv := &Mesh{}
 	if err := riv.StartAutoconfigure(); err != nil {
 		t.Fatalf("Failed to start RiV-mesh: %s", err)

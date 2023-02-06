@@ -192,7 +192,7 @@ func getArgs() rivArgs {
 	}
 }
 
-// The main function is responsible for configuring and starting Yggdrasil.
+// The main function is responsible for configuring and starting Mesh.
 func run(args rivArgs, sigCh chan os.Signal) {
 	// Create a new logger that logs output to stdout.
 	var logger *log.Logger
