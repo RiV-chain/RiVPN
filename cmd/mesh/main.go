@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/text/encoding/unicode"
 
@@ -193,7 +193,7 @@ func getArgs() rivArgs {
 }
 
 // The main function is responsible for configuring and starting Yggdrasil.
-func run(args rivArgs, ctx context.Context) {
+func run(args rivArgs, sigCh chan os.Signal) {
 	// Create a new logger that logs output to stdout.
 	var logger *log.Logger
 	switch args.logto {
@@ -403,10 +403,16 @@ func run(args rivArgs, ctx context.Context) {
 	logger.Infof("Your IPv6 address is %s", address.String())
 	logger.Infof("Your IPv6 subnet is %s", subnet.String())
 
+	//Windows service shutdown service
+	minwinsvc.SetOnExit(func() {
+		logger.Infof("Shutting down service ...")
+		sigCh <- os.Interrupt
+		//there is a pause in handler. If the handler is finished other routines are not running.
+		//Slee code gives a chance to run Stop methods.
+		time.Sleep(10 * time.Second)
+	})
 	// Block until we are told to shut down.
-	<-ctx.Done()
-
-	// Shut down the node.
+	<-sigCh
 	_ = n.multicast.Stop()
 	_ = n.tun.Stop()
 	n.core.Stop()
@@ -416,18 +422,14 @@ func run(args rivArgs, ctx context.Context) {
 func main() {
 	args := getArgs()
 
-	// Catch interrupts from the operating system to exit gracefully.
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	// Capture the service being stopped on Windows.
-	minwinsvc.SetOnExit(cancel)
-
-	// Start the node, block and then wait for it to shut down.
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		run(args, ctx)
+		run(args, sigCh)
 	}()
 	wg.Wait()
 }
