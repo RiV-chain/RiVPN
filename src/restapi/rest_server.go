@@ -21,10 +21,9 @@ func NewRestServer(server *restapi.RestServer, cfg *c.NodeConfig) (*restapi.Rest
 		cfg,
 	}
 	//add CKR for REST handlers here
-	err := a.server.AddHandler(restapi.ApiHandler{
-		Method: "GET", Pattern: "/api/tunnelrouting", Desc: "Show TunnelRouting settings", Handler: a.getApiTunnelRouting,
-	})
-	return a.server, err
+	a.server.AddHandler(restapi.ApiHandler{Method: "GET", Pattern: "/api/tunnelrouting", Desc: "Show TunnelRouting settings", Handler: a.getApiTunnelRouting})
+	a.server.AddHandler(restapi.ApiHandler{Method: "PUT", Pattern: "/api/tunnelrouting", Desc: "Set TunnelRouting settings", Handler: a.putApiTunnelRouting})
+	return a.server, nil
 }
 
 // @Summary		Show TunnelRouting settings.
