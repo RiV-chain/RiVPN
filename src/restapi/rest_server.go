@@ -51,7 +51,12 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	if tunnelRouting.Enable {
+		if tunnelRouting.IPv4RemoteSubnets == nil && tunnelRouting.IPv6RemoteSubnets == nil {
+			http.Error(w, "IPv4RemoteSubnets and IPv6RemoteSubnets parameters are missing", http.StatusBadRequest)
+			return
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 	a.saveConfig(func(cfg *c.NodeConfig) {
 		cfg.TunnelRoutingConfig = tunnelRouting
