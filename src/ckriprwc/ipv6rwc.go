@@ -66,13 +66,13 @@ func (k *keyStore) init(c *core.Core, cfg *config.NodeConfig, log *log.Logger) {
 		log:    log,
 	}
 	if err := k.ckr.configure(); err != nil {
-		panic(err)
+		log.Errorln("Could not configure CKR: ", err)
 	}
 	k.address = *c.AddrForKey(k.core.PublicKey())
 	k.subnet = *c.SubnetForKey(k.core.PublicKey())
 	if err := k.core.SetOutOfBandHandler(k.oobHandler); err != nil {
 		err = fmt.Errorf("tun.core.SetOutOfBandHander: %w", err)
-		panic(err)
+		log.Errorln("Could not configure oobHandler in CKR: ", err)
 	}
 	k.keyToInfo = make(map[keyArray]*keyInfo)
 	k.addrToInfo = make(map[core.Address]*keyInfo)
