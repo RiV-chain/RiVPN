@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 
@@ -54,6 +55,32 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 		if tunnelRouting.IPv4RemoteSubnets == nil && tunnelRouting.IPv6RemoteSubnets == nil {
 			http.Error(w, "IPv4RemoteSubnets and IPv6RemoteSubnets parameters are missing", http.StatusBadRequest)
 			return
+		}
+		if tunnelRouting.IPv4RemoteSubnets != nil {
+			for _, value := range tunnelRouting.IPv4RemoteSubnets {
+				if value == "" {
+					http.Error(w, "Public key is missing", http.StatusBadRequest)
+					return
+				}
+				data, err := hex.DecodeString(value)
+				if err != nil || len(data) != 32 {
+					http.Error(w, "Public key is invalid", http.StatusBadRequest)
+					return
+				}
+			}
+		}
+		if tunnelRouting.IPv6RemoteSubnets != nil {
+			for _, value := range tunnelRouting.IPv6RemoteSubnets {
+				if value == "" {
+					http.Error(w, "Public key is missing", http.StatusBadRequest)
+					return
+				}
+				data, err := hex.DecodeString(value)
+				if err != nil || len(data) != 32 {
+					http.Error(w, "Public key is invalid", http.StatusBadRequest)
+					return
+				}
+			}
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
