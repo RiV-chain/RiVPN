@@ -1,6 +1,6 @@
 # RiVPN
 
-This is an RiV-mesh v0.4 build that re-adds tunnel routing/crypto-key routing (CKR) support. Add a section to your `mesh.conf` like this:
+This is an RiV-mesh v0.4 build that re-adds tunnel routing/crypto-key routing (CKR) support. Edit section FeaturesConfig in your `mesh.conf` like this:
 
 ```
 FeaturesConfig:
