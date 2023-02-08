@@ -11,6 +11,7 @@ import (
 	"github.com/RiV-chain/RiVPN/src/ckriprwc"
 	c "github.com/RiV-chain/RiVPN/src/config"
 	"github.com/gologme/log"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/RiV-chain/RiV-mesh/src/core"
 	"github.com/RiV-chain/RiV-mesh/src/defaults"
@@ -96,13 +97,15 @@ func (m *Mesh) StartJSON(configjson []byte) error {
 	}
 
 	mtu := m.config.IfMTU
-	m.iprwc = ckriprwc.NewReadWriteCloser(m.core, &c.NodeConfig{
-		TunnelRoutingConfig: c.TunnelRoutingConfig{
-			Enable:            m.config.FeaturesConfig["Enable"].(bool),
-			IPv4RemoteSubnets: m.config.FeaturesConfig["IPv4RemoteSubnets"].(map[string]string),
-			IPv6RemoteSubnets: m.config.FeaturesConfig["IPv6RemoteSubnets"].(map[string]string),
-		},
-	}, logger)
+
+	var node_config = &c.TunnelRoutingConfig{
+		Enable:            false,
+		IPv4RemoteSubnets: nil,
+		IPv6RemoteSubnets: nil,
+	}
+	mapstructure.Decode(m.config.FeaturesConfig["TunnelRouting"], node_config)
+
+	m.iprwc = ckriprwc.NewReadWriteCloser(m.core, node_config, logger)
 	if m.iprwc.MaxMTU() < mtu {
 		mtu = m.iprwc.MaxMTU()
 	}
