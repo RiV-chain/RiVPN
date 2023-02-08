@@ -57,12 +57,12 @@ type buffer struct {
 	timeout *time.Timer
 }
 
-func (k *keyStore) init(c *core.Core, cfg *config.NodeConfig, log *log.Logger) {
+func (k *keyStore) init(c *core.Core, cfg *config.TunnelRoutingConfig, log *log.Logger) {
 	k.core = c
 	k.log = log
 	k.ckr = &cryptokey{
 		core:   c,
-		config: &cfg.TunnelRoutingConfig,
+		config: cfg,
 		log:    log,
 	}
 	if err := k.ckr.configure(); err != nil {
@@ -364,7 +364,7 @@ type ReadWriteCloser struct {
 	keyStore
 }
 
-func NewReadWriteCloser(c *core.Core, cfg *config.NodeConfig, log *log.Logger) *ReadWriteCloser {
+func NewReadWriteCloser(c *core.Core, cfg *config.TunnelRoutingConfig, log *log.Logger) *ReadWriteCloser {
 	rwc := new(ReadWriteCloser)
 	rwc.init(c, cfg, log)
 	return rwc

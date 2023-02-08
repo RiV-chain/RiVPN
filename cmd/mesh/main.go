@@ -384,8 +384,8 @@ func run(args rivArgs, sigCh chan os.Signal) {
 			tun.InterfaceMTU(cfg.IfMTU),
 		}
 
-		var node_config *config.NodeConfig
-		mapstructure.Decode(cfg.FeaturesConfig, &node_config)
+		var node_config *config.TunnelRoutingConfig
+		mapstructure.Decode(cfg.FeaturesConfig["TunnelRouting"], &node_config)
 		// TODO: refactor this!
 		rwc := ckriprwc.NewReadWriteCloser(n.core, node_config, logger)
 		if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
