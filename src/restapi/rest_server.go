@@ -45,7 +45,7 @@ func (a *RestServer) getApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 // @Failure		500		{error}		error		"Internal error"
 // @Router		/tunnelrouting [put]
 func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request) {
-	var tunnelRouting config.NodeConfig
+	var tunnelRouting config.TunnelRoutingConfig
 	err := json.NewDecoder(r.Body).Decode(&tunnelRouting)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
