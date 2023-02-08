@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/text/encoding/unicode"
 
+	c "github.com/RiV-chain/RiV-mesh/src/config"
 	"github.com/RiV-chain/RiVPN/src/ckriprwc"
 	"github.com/RiV-chain/RiVPN/src/config"
 	"github.com/RiV-chain/RiVPN/src/tun"
@@ -44,7 +45,7 @@ type node struct {
 	rest_server *api.RestServer
 }
 
-func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf bool) *config.NodeConfig {
+func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf bool) *c.NodeConfig {
 	// Use a configuration file. If -useconf, the configuration will be read
 	// from stdin. If -useconffile, the configuration will be read from the
 	// filesystem.
@@ -77,9 +78,7 @@ func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf
 	// then parse the configuration we loaded above on top of it. The effect
 	// of this is that any configuration item that is missing from the provided
 	// configuration will use a sane default.
-	cfg := &config.NodeConfig{
-		NodeConfig: defaults.GenerateConfig(),
-	}
+	cfg := defaults.GenerateConfig()
 	var dat map[string]interface{}
 	if err := hjson.Unmarshal(conf, &dat); err != nil {
 		panic(err)
@@ -219,7 +218,7 @@ func run(args rivArgs, sigCh chan os.Signal) {
 		setLogLevel(args.loglevel, logger)
 	}
 
-	var cfg *config.NodeConfig
+	var cfg *c.NodeConfig
 	var err error
 	switch {
 	case args.ver:
@@ -229,9 +228,7 @@ func run(args rivArgs, sigCh chan os.Signal) {
 	case args.autoconf:
 		// Use an autoconf-generated config, this will give us random keys and
 		// port numbers, and will use an automatically selected TUN interface.
-		cfg = &config.NodeConfig{
-			NodeConfig: defaults.GenerateConfig(),
-		}
+		cfg = defaults.GenerateConfig()
 	case args.useconffile != "" || args.useconf:
 		// Read the configuration from either stdin or from the filesystem
 		cfg = readConfig(logger, args.useconf, args.useconffile, args.normaliseconf)
@@ -388,9 +385,17 @@ func run(args rivArgs, sigCh chan os.Signal) {
 		}
 
 		// TODO: refactor this!
-		rwc := ckriprwc.NewReadWriteCloser(n.core, cfg, logger)
-		if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
-			panic(err)
+		if cfg.FeaturesConfig != nil {
+			rwc := ckriprwc.NewReadWriteCloser(n.core, &config.NodeConfig{
+				TunnelRoutingConfig: config.TunnelRoutingConfig{
+					Enable:            cfg.FeaturesConfig["Enable"].(bool),
+					IPv4RemoteSubnets: cfg.FeaturesConfig["IPv4RemoteSubnets"].(map[string]string),
+					IPv6RemoteSubnets: cfg.FeaturesConfig["IPv6RemoteSubnets"].(map[string]string),
+				},
+			}, logger)
+			if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
+				panic(err)
+			}
 		}
 	}
 
