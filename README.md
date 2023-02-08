@@ -3,6 +3,8 @@
 This is an RiV-mesh v0.4 build that re-adds tunnel routing/crypto-key routing (CKR) support. Add a section to your `mesh.conf` like this:
 
 ```
+FeaturesConfig:
+{
   TunnelRouting: {
     Enable: true
     IPv4RemoteSubnets: {
@@ -12,6 +14,7 @@ This is an RiV-mesh v0.4 build that re-adds tunnel routing/crypto-key routing (C
       "b::b/b": remotepublickey
     }
   }
+}
 ```
 
 Then use Go 1.18 to build and run:
