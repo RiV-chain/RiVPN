@@ -3,6 +3,7 @@ package restapi
 import (
 	"encoding/hex"
 	"encoding/json"
+	"net"
 	"net/http"
 
 	c "github.com/RiV-chain/RiV-mesh/src/config"
@@ -57,9 +58,14 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if tunnelRouting.IPv4RemoteSubnets != nil {
-			for _, value := range tunnelRouting.IPv4RemoteSubnets {
+			for subnet, value := range tunnelRouting.IPv4RemoteSubnets {
 				if value == "" {
 					http.Error(w, "Public key is missing", http.StatusBadRequest)
+					return
+				}
+				_, _, err := net.ParseCIDR(subnet)
+				if err != nil {
+					http.Error(w, "IPv4 subnetwork is invalid", http.StatusBadRequest)
 					return
 				}
 				data, err := hex.DecodeString(value)
@@ -70,9 +76,14 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 			}
 		}
 		if tunnelRouting.IPv6RemoteSubnets != nil {
-			for _, value := range tunnelRouting.IPv6RemoteSubnets {
+			for subnet, value := range tunnelRouting.IPv6RemoteSubnets {
 				if value == "" {
 					http.Error(w, "Public key is missing", http.StatusBadRequest)
+					return
+				}
+				_, _, err := net.ParseCIDR(subnet)
+				if err != nil {
+					http.Error(w, "IPv6 subnetwork is invalid", http.StatusBadRequest)
 					return
 				}
 				data, err := hex.DecodeString(value)
