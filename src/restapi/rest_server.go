@@ -34,7 +34,7 @@ func NewRestServer(server *restapi.RestServer, cfg *c.NodeConfig) (*restapi.Rest
 // @Failure		401		{error}		error		"Authentication failed"
 // @Router		/tunnelrouting [get]
 func (a *RestServer) getApiTunnelRouting(w http.ResponseWriter, r *http.Request) {
-	restapi.WriteJson(w, r, a.config.FeaturesConfig)
+	restapi.WriteJson(w, r, a.config.FeaturesConfig["TunnelRouting"])
 }
 
 // @Summary		Set TunnelRouting settings.
