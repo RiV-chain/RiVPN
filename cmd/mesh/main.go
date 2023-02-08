@@ -385,7 +385,7 @@ func run(args rivArgs, sigCh chan os.Signal) {
 		}
 
 		// TODO: refactor this!
-		if cfg.FeaturesConfig != nil {
+		if cfg.FeaturesConfig["Enable"] != nil {
 			rwc := ckriprwc.NewReadWriteCloser(n.core, &config.NodeConfig{
 				TunnelRoutingConfig: config.TunnelRoutingConfig{
 					Enable:            cfg.FeaturesConfig["Enable"].(bool),
