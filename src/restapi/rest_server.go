@@ -5,21 +5,22 @@ import (
 	"encoding/json"
 	"net/http"
 
-	d "github.com/RiV-chain/RiV-mesh/src/defaults"
 	"github.com/RiV-chain/RiV-mesh/src/restapi"
 	c "github.com/RiV-chain/RiVPN/src/config"
 	"github.com/RiV-chain/RiVPN/src/defaults"
 )
 
 type RestServer struct {
-	server *restapi.RestServer
-	config *c.NodeConfig
+	server   *restapi.RestServer
+	config   *c.NodeConfig
+	ConfigFn string
 }
 
-func NewRestServer(server *restapi.RestServer, cfg *c.NodeConfig) (*restapi.RestServer, error) {
+func NewRestServer(server *restapi.RestServer, node_config *c.NodeConfig, vpn_config_path string) (*restapi.RestServer, error) {
 	a := &RestServer{
 		server,
-		cfg,
+		node_config,
+		vpn_config_path,
 	}
 	//add CKR for REST handlers here
 	a.server.AddHandler(restapi.ApiHandler{Method: "GET", Pattern: "/api/tunnelrouting", Desc: "Show TunnelRouting settings", Handler: a.getApiTunnelRouting})
@@ -90,18 +91,15 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *RestServer) saveConfig(setConfigFields func(*c.NodeConfig), r *http.Request) {
-	if len(a.server.ConfigFn) > 0 {
+	if len(a.ConfigFn) > 0 {
 		saveHeaders := r.Header["Riv-Save-Config"]
 		if len(saveHeaders) > 0 && saveHeaders[0] == "true" {
-			cfg, err := d.ReadConfig(a.server.ConfigFn)
-			config := &c.NodeConfig{
-				NodeConfig: cfg,
-			}
+			cfg, err := defaults.ReadConfig(a.ConfigFn)
 			if err == nil {
 				if setConfigFields != nil {
-					setConfigFields(config)
+					setConfigFields(cfg)
 				}
-				err := defaults.WriteConfig(a.server.ConfigFn, config)
+				err := defaults.WriteConfig(a.ConfigFn, cfg)
 				if err != nil {
 					a.server.Log.Errorln("Config file write error:", err)
 				}

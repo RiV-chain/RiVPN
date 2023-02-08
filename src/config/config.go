@@ -1,9 +1,6 @@
 package config
 
-import "github.com/RiV-chain/RiV-mesh/src/config"
-
 type NodeConfig struct {
-	*config.NodeConfig
 	TunnelRoutingConfig `json:"TunnelRouting"`
 }
 

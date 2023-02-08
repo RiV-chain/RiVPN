@@ -19,8 +19,9 @@ import (
 
 	"golang.org/x/text/encoding/unicode"
 
+	"github.com/RiV-chain/RiV-mesh/src/config"
 	"github.com/RiV-chain/RiVPN/src/ckriprwc"
-	"github.com/RiV-chain/RiVPN/src/config"
+	c "github.com/RiV-chain/RiVPN/src/config"
 	"github.com/RiV-chain/RiVPN/src/tun"
 	"github.com/gologme/log"
 	gsyslog "github.com/hashicorp/go-syslog"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/RiV-chain/RiV-mesh/src/defaults"
 	api "github.com/RiV-chain/RiV-mesh/src/restapi"
+	d "github.com/RiV-chain/RiVPN/src/defaults"
 	r "github.com/RiV-chain/RiVPN/src/restapi"
 
 	"github.com/RiV-chain/RiV-mesh/src/core"
@@ -77,9 +79,8 @@ func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf
 	// then parse the configuration we loaded above on top of it. The effect
 	// of this is that any configuration item that is missing from the provided
 	// configuration will use a sane default.
-	cfg := &config.NodeConfig{
-		NodeConfig: defaults.GenerateConfig(),
-	}
+	cfg := defaults.GenerateConfig()
+
 	var dat map[string]interface{}
 	if err := hjson.Unmarshal(conf, &dat); err != nil {
 		panic(err)
@@ -104,6 +105,23 @@ func readConfig(log *log.Logger, useconf bool, useconffile string, normaliseconf
 // with -genconf.
 func doGenconf(isjson bool) string {
 	cfg := defaults.GenerateConfig()
+	var bs []byte
+	var err error
+	if isjson {
+		bs, err = json.MarshalIndent(cfg, "", "  ")
+	} else {
+		bs, err = hjson.Marshal(cfg)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return string(bs)
+}
+
+// Generates a new configuration for VPN and returns it in HJSON format. This is used
+// with -genconf.
+func doGenVpnconf(isjson bool) string {
+	cfg := d.GenerateConfig()
 	var bs []byte
 	var err error
 	if isjson {
@@ -144,25 +162,29 @@ func setLogLevel(loglevel string, logger *log.Logger) {
 }
 
 type rivArgs struct {
-	genconf       bool
-	useconf       bool
-	normaliseconf bool
-	confjson      bool
-	autoconf      bool
-	ver           bool
-	getaddr       bool
-	getsnet       bool
-	useconffile   string
-	logto         string
-	loglevel      string
-	httpaddress   string
-	wwwroot       string
+	genvpnconf     bool
+	genconf        bool
+	useconf        bool
+	normaliseconf  bool
+	confjson       bool
+	autoconf       bool
+	ver            bool
+	getaddr        bool
+	getsnet        bool
+	useconffile    string
+	usevpnconffile string
+	logto          string
+	loglevel       string
+	httpaddress    string
+	wwwroot        string
 }
 
 func getArgs() rivArgs {
 	genconf := flag.Bool("genconf", false, "print a new config to stdout")
+	genvpnconf := flag.Bool("genvpnconf", false, "print a new config for VPN to stdout")
 	useconf := flag.Bool("useconf", false, "read HJSON/JSON config from stdin")
 	useconffile := flag.String("useconffile", "", "read HJSON/JSON config from specified file path")
+	usevpnconffile := flag.String("usevpnconffile", "", "read HJSON/JSON VPN config from specified file path")
 	normaliseconf := flag.Bool("normaliseconf", false, "use in combination with either -useconf or -useconffile, outputs your configuration normalised")
 	confjson := flag.Bool("json", false, "print configuration from -genconf or -normaliseconf as JSON instead of HJSON")
 	autoconf := flag.Bool("autoconf", false, "automatic mode (dynamic IP, peer with IPv6 neighbors)")
@@ -176,19 +198,21 @@ func getArgs() rivArgs {
 
 	flag.Parse()
 	return rivArgs{
-		genconf:       *genconf,
-		useconf:       *useconf,
-		useconffile:   *useconffile,
-		normaliseconf: *normaliseconf,
-		confjson:      *confjson,
-		autoconf:      *autoconf,
-		ver:           *ver,
-		logto:         *logto,
-		getaddr:       *getaddr,
-		getsnet:       *getsnet,
-		loglevel:      *loglevel,
-		httpaddress:   *httpaddress,
-		wwwroot:       *wwwroot,
+		genconf:        *genconf,
+		genvpnconf:     *genvpnconf,
+		useconf:        *useconf,
+		useconffile:    *useconffile,
+		usevpnconffile: *usevpnconffile,
+		normaliseconf:  *normaliseconf,
+		confjson:       *confjson,
+		autoconf:       *autoconf,
+		ver:            *ver,
+		logto:          *logto,
+		getaddr:        *getaddr,
+		getsnet:        *getsnet,
+		loglevel:       *loglevel,
+		httpaddress:    *httpaddress,
+		wwwroot:        *wwwroot,
 	}
 }
 
@@ -220,6 +244,7 @@ func run(args rivArgs, sigCh chan os.Signal) {
 	}
 
 	var cfg *config.NodeConfig
+	var vpn_cfg *c.NodeConfig
 	var err error
 	switch {
 	case args.ver:
@@ -229,9 +254,8 @@ func run(args rivArgs, sigCh chan os.Signal) {
 	case args.autoconf:
 		// Use an autoconf-generated config, this will give us random keys and
 		// port numbers, and will use an automatically selected TUN interface.
-		cfg = &config.NodeConfig{
-			NodeConfig: defaults.GenerateConfig(),
-		}
+		cfg = defaults.GenerateConfig()
+		vpn_cfg = d.GenerateConfig()
 	case args.useconffile != "" || args.useconf:
 		// Read the configuration from either stdin or from the filesystem
 		cfg = readConfig(logger, args.useconf, args.useconffile, args.normaliseconf)
@@ -252,9 +276,18 @@ func run(args rivArgs, sigCh chan os.Signal) {
 			fmt.Println(string(bs))
 			return
 		}
+	case args.usevpnconffile != "":
+		vpn_cfg, err = d.ReadConfig(args.useconffile)
+		if err != nil {
+			panic(err)
+		}
 	case args.genconf:
 		// Generate a new configuration and print it to stdout.
 		fmt.Println(doGenconf(args.confjson))
+		return
+	case args.genvpnconf:
+		// Generate a new configuration and print it to stdout.
+		fmt.Println(doGenVpnconf(args.confjson))
 		return
 	default:
 		// No flags were provided, therefore print the list of flags to stdout.
@@ -264,6 +297,12 @@ func run(args rivArgs, sigCh chan os.Signal) {
 	// that neither -autoconf, -useconf or -useconffile were set above. Stop
 	// if we don't.
 	if cfg == nil {
+		return
+	}
+	// Have we got a working configuration? If we don't then it probably means
+	// that neither -autoconf, -usevpnconffile were set above. Stop
+	// if we don't.
+	if vpn_cfg == nil {
 		return
 	}
 
@@ -369,7 +408,8 @@ func run(args rivArgs, sigCh chan os.Signal) {
 		if n.rest_server, err = api.NewRestServer(options); err != nil {
 			logger.Errorln(err)
 		} else {
-			if rest_server, err := r.NewRestServer(n.rest_server, cfg); err != nil {
+
+			if rest_server, err := r.NewRestServer(n.rest_server, vpn_cfg, args.usevpnconffile); err != nil {
 				logger.Errorln(err)
 			} else {
 				err = rest_server.Serve()
@@ -388,7 +428,7 @@ func run(args rivArgs, sigCh chan os.Signal) {
 		}
 
 		// TODO: refactor this!
-		rwc := ckriprwc.NewReadWriteCloser(n.core, cfg, logger)
+		rwc := ckriprwc.NewReadWriteCloser(n.core, vpn_cfg, logger)
 		if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
 			panic(err)
 		}
