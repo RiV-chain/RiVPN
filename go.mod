@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Arceliar/ironwood v0.0.0-20221115123222-ec61cea2f439
 	github.com/Arceliar/phony v0.0.0-20210209235338-dde1a8dca979
-	github.com/RiV-chain/RiV-mesh v0.4.7-0.20230206192750-4554b99a9968
+	github.com/RiV-chain/RiV-mesh v0.4.7-0.20230208130636-1df79a6f8182
 	github.com/gologme/log v1.2.0
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hjson/hjson-go v3.1.0+incompatible

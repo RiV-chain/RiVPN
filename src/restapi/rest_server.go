@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	c "github.com/RiV-chain/RiV-mesh/src/config"
 	d "github.com/RiV-chain/RiV-mesh/src/defaults"
 	"github.com/RiV-chain/RiV-mesh/src/restapi"
-	c "github.com/RiV-chain/RiVPN/src/config"
-	"github.com/RiV-chain/RiVPN/src/defaults"
+	"github.com/RiV-chain/RiVPN/src/config"
 )
 
 type RestServer struct {
@@ -34,7 +34,7 @@ func NewRestServer(server *restapi.RestServer, cfg *c.NodeConfig) (*restapi.Rest
 // @Failure		401		{error}		error		"Authentication failed"
 // @Router		/tunnelrouting [get]
 func (a *RestServer) getApiTunnelRouting(w http.ResponseWriter, r *http.Request) {
-	restapi.WriteJson(w, r, a.config.TunnelRoutingConfig)
+	restapi.WriteJson(w, r, a.config.FeaturesConfig)
 }
 
 // @Summary		Set TunnelRouting settings.
@@ -45,7 +45,7 @@ func (a *RestServer) getApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 // @Failure		500		{error}		error		"Internal error"
 // @Router		/tunnelrouting [put]
 func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request) {
-	var tunnelRouting c.TunnelRoutingConfig
+	var tunnelRouting config.NodeConfig
 	err := json.NewDecoder(r.Body).Decode(&tunnelRouting)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -85,7 +85,7 @@ func (a *RestServer) putApiTunnelRouting(w http.ResponseWriter, r *http.Request)
 	}
 	w.WriteHeader(http.StatusNoContent)
 	a.saveConfig(func(cfg *c.NodeConfig) {
-		cfg.TunnelRoutingConfig = tunnelRouting
+		cfg.FeaturesConfig["TunnelRouting"] = tunnelRouting
 	}, r)
 }
 
@@ -94,14 +94,11 @@ func (a *RestServer) saveConfig(setConfigFields func(*c.NodeConfig), r *http.Req
 		saveHeaders := r.Header["Riv-Save-Config"]
 		if len(saveHeaders) > 0 && saveHeaders[0] == "true" {
 			cfg, err := d.ReadConfig(a.server.ConfigFn)
-			config := &c.NodeConfig{
-				NodeConfig: cfg,
-			}
 			if err == nil {
 				if setConfigFields != nil {
-					setConfigFields(config)
+					setConfigFields(cfg)
 				}
-				err := defaults.WriteConfig(a.server.ConfigFn, config)
+				err := d.WriteConfig(a.server.ConfigFn, cfg)
 				if err != nil {
 					a.server.Log.Errorln("Config file write error:", err)
 				}

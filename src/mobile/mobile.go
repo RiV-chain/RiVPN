@@ -7,8 +7,9 @@ import (
 	"net"
 	"regexp"
 
+	"github.com/RiV-chain/RiV-mesh/src/config"
 	"github.com/RiV-chain/RiVPN/src/ckriprwc"
-	"github.com/RiV-chain/RiVPN/src/config"
+	c "github.com/RiV-chain/RiVPN/src/config"
 	"github.com/gologme/log"
 
 	"github.com/RiV-chain/RiV-mesh/src/core"
@@ -44,9 +45,7 @@ func (m *Mesh) StartJSON(configjson []byte) error {
 	logger.EnableLevel("error")
 	logger.EnableLevel("warn")
 	logger.EnableLevel("info")
-	m.config = &config.NodeConfig{
-		NodeConfig: defaults.GenerateConfig(),
-	}
+	m.config = defaults.GenerateConfig()
 	if err := json.Unmarshal(configjson, &m.config); err != nil {
 		return err
 	}
@@ -97,7 +96,13 @@ func (m *Mesh) StartJSON(configjson []byte) error {
 	}
 
 	mtu := m.config.IfMTU
-	m.iprwc = ckriprwc.NewReadWriteCloser(m.core, m.config, logger)
+	m.iprwc = ckriprwc.NewReadWriteCloser(m.core, &c.NodeConfig{
+		TunnelRoutingConfig: c.TunnelRoutingConfig{
+			Enable:            m.config.FeaturesConfig["Enable"].(bool),
+			IPv4RemoteSubnets: m.config.FeaturesConfig["IPv4RemoteSubnets"].(map[string]string),
+			IPv6RemoteSubnets: m.config.FeaturesConfig["IPv6RemoteSubnets"].(map[string]string),
+		},
+	}, logger)
 	if m.iprwc.MaxMTU() < mtu {
 		mtu = m.iprwc.MaxMTU()
 	}

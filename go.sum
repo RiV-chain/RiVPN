@@ -6,6 +6,8 @@ github.com/Arceliar/phony v0.0.0-20210209235338-dde1a8dca979 h1:WndgpSW13S32VLQ3
 github.com/Arceliar/phony v0.0.0-20210209235338-dde1a8dca979/go.mod h1:6Lkn+/zJilRMsKmbmG1RPoamiArC6HS73xbwRyp3UyI=
 github.com/RiV-chain/RiV-mesh v0.4.7-0.20230206192750-4554b99a9968 h1:tjDuJ/pzOtv8X51LiapLzZXBWoaWCf7FnCjNFVDMjvM=
 github.com/RiV-chain/RiV-mesh v0.4.7-0.20230206192750-4554b99a9968/go.mod h1:8NOrw5zhlCDDn2v9Q2PrBPA0Cl5XHEUbtsmUbnOR3tU=
+github.com/RiV-chain/RiV-mesh v0.4.7-0.20230208130636-1df79a6f8182 h1:wxFi2EqQTp0pGqZWSnpdCPK6fVeT61qlKtCLsSyrtHk=
+github.com/RiV-chain/RiV-mesh v0.4.7-0.20230208130636-1df79a6f8182/go.mod h1:8NOrw5zhlCDDn2v9Q2PrBPA0Cl5XHEUbtsmUbnOR3tU=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
