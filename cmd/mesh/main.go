@@ -384,18 +384,28 @@ func run(args rivArgs, sigCh chan os.Signal) {
 			tun.InterfaceMTU(cfg.IfMTU),
 		}
 
-		// TODO: refactor this!
-		if cfg.FeaturesConfig["Enable"] != nil {
-			rwc := ckriprwc.NewReadWriteCloser(n.core, &config.NodeConfig{
+		var node_config *config.NodeConfig
+		if cfg.FeaturesConfig["TunnelRouting"] != nil {
+			node_config = &config.NodeConfig{
 				TunnelRoutingConfig: config.TunnelRoutingConfig{
-					Enable:            cfg.FeaturesConfig["Enable"].(bool),
-					IPv4RemoteSubnets: cfg.FeaturesConfig["IPv4RemoteSubnets"].(map[string]string),
-					IPv6RemoteSubnets: cfg.FeaturesConfig["IPv6RemoteSubnets"].(map[string]string),
+					Enable:            cfg.FeaturesConfig["TunnelRouting"].(map[string]interface{})["Enable"].(bool),
+					IPv4RemoteSubnets: cfg.FeaturesConfig["TunnelRouting"].(map[string]interface{})["IPv4RemoteSubnets"].(map[string]string),
+					IPv6RemoteSubnets: cfg.FeaturesConfig["TunnelRouting"].(map[string]interface{})["IPv6RemoteSubnets"].(map[string]string),
 				},
-			}, logger)
-			if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
-				panic(err)
 			}
+		} else {
+			node_config = &config.NodeConfig{
+				TunnelRoutingConfig: config.TunnelRoutingConfig{
+					Enable:            false,
+					IPv4RemoteSubnets: nil,
+					IPv6RemoteSubnets: nil,
+				},
+			}
+		}
+		// TODO: refactor this!
+		rwc := ckriprwc.NewReadWriteCloser(n.core, node_config, logger)
+		if n.tun, err = tun.New(n.core, rwc, logger, options...); err != nil {
+			panic(err)
 		}
 	}
 
