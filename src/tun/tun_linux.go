@@ -14,6 +14,7 @@ import (
 
 // Configures the TUN adapter with the correct IPv6 address and MTU.
 func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
+	autoipv4 := "169.254.10.10"
 	if ifname == "auto" {
 		ifname = "\000"
 	}
@@ -27,9 +28,10 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 	} else {
 		tun.mtu = 0
 	}
-	if err := tun.setupAddress(addr); err != nil {
+	if err := tun.setupAddress(addr, autoipv4); err != nil {
 		return err
 	}
+
 	if link, err := netlink.LinkByName(tun.Name()); err != nil {
 		return err
 	} else {
@@ -49,7 +51,7 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 // is used to do this, so there is not a hard requirement on "ip" or "ifconfig"
 // to exist on the system, but this will fail if Netlink is not present in the
 // kernel (it nearly always is).
-func (tun *TunAdapter) setupAddress(addr string) error {
+func (tun *TunAdapter) setupAddress(addr string, autoipv4 string) error {
 	nladdr, err := netlink.ParseAddr(addr)
 	if err != nil {
 		return err
@@ -61,6 +63,13 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	if err := netlink.AddrAdd(nlintf, nladdr); err != nil {
 		return err
 	}
+	nlautoipv4, err := netlink.ParseAddr(autoipv4)
+	if err != nil {
+		return err
+	}
+	if err := netlink.AddrAdd(nlintf, nlautoipv4); err != nil {
+		return err
+	}
 	if err := netlink.LinkSetMTU(nlintf, int(tun.mtu)); err != nil {
 		return err
 	}
@@ -70,6 +79,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	// Friendly output
 	tun.log.Infof("Interface name: %s", tun.Name())
 	tun.log.Infof("Interface IPv6: %s", addr)
+	tun.log.Infof("Interface IPv4: %s", autoipv4)
 	tun.log.Infof("Interface MTU: %d", tun.mtu)
 	return nil
 }
