@@ -14,7 +14,7 @@ import (
 
 // Configures the TUN adapter with the correct IPv6 address and MTU.
 func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
-	autoipv4 := "169.254.10.10"
+	autoipv4 := "169.254.10.10/24"
 	if ifname == "auto" {
 		ifname = "\000"
 	}
