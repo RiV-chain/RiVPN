@@ -85,7 +85,7 @@ func (tun *TunAdapter) setupAddress(addr string, autoipv4 string) error {
 }
 
 func (tun *TunAdapter) setupV4Routes(link netlink.Link) error {
-	ip := net.IPv4(127, 1, 1, 1)
+	//ip := net.IPv4(127, 1, 1, 1)
 	for _, r := range tun.rwc.V4Routes() {
 		route := &netlink.Route{
 			LinkIndex: link.Attrs().Index,
@@ -93,7 +93,7 @@ func (tun *TunAdapter) setupV4Routes(link netlink.Link) error {
 				IP:   net.IP(r.Prefix.Addr().AsSlice()),
 				Mask: net.CIDRMask(r.Prefix.Masked().Bits(), 32),
 			},
-			Src: ip,
+			//Src: ip,
 		}
 		if err := netlink.RouteAdd(route); err != nil {
 			return err
