@@ -7,11 +7,14 @@ package tun
 
 import (
 	"encoding/binary"
+	"golang.org/x/sys/unix"
+	"net"
+	"net/netip"
+	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 
 	wgtun "golang.zx2c4.com/wireguard/tun"
 )
@@ -158,7 +161,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(ip.Bits(), 32)).String()).As4(),
 		},
 	}
-	copy(ifReq.Name[:], ar.ifra_name)
+	copy(ifReq.Name[:], tun.Name())
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
 		err = errno
 		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
