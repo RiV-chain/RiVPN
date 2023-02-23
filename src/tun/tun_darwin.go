@@ -148,17 +148,17 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		Addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   ip,
+			Addr:   net.IP.To4(ip),
 		},
 		Dstaddr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   ip,
+			Addr:   net.IP.To4(ip),
 		},
 		Mask: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(ip.Bits(), 32)).String()).As4(),
+			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(16, 32)).String()).As4(),
 		},
 	}
 	copy(ifReq.Name[:], tun.Name())
