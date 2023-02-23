@@ -74,6 +74,22 @@ type ifreq struct {
 	ifru_mtu uint32
 }
 
+type ifAliasReq struct {
+	Name    [unix.IFNAMSIZ]byte
+	Addr    unix.RawSockaddrInet4
+	Dstaddr unix.RawSockaddrInet4
+	Mask    unix.RawSockaddrInet4
+}
+
+func useSocket(domain, typ, proto int, block func(socketFd int) error) error {
+	socketFd, err := unix.Socket(domain, typ, proto)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(socketFd)
+	return block(socketFd)
+}
+
 // Sets the IPv6 address of the utun adapter. On Darwin/macOS this is done using
 // a system socket and making direct syscalls to the kernel.
 func (tun *TunAdapter) setupAddress(addr string) error {
@@ -123,11 +139,42 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		return err
 	}
 
+	//assign IPv4 stub
+	ip := net.IPv4(169, 254, 10, 10)
+	ifReq := ifAliasReq{
+		Addr: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   ip,
+		},
+		Dstaddr: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   ip,
+		},
+		Mask: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(ip.Bits(), 32)).String()).As4(),
+		},
+	}
+	copy(ifReq.Name[:], ar.ifra_name)
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
 		err = errno
 		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
 		return err
 	}
+	err = useSocket(unix.AF_INET, unix.SOCK_DGRAM, 0, func(socketFd int) error {
+		if _, _, errno := unix.Syscall(
+			syscall.SYS_IOCTL,
+			uintptr(socketFd),
+			uintptr(unix.SIOCAIFADDR),
+			uintptr(unsafe.Pointer(&ifReq)),
+		); errno != 0 {
+			return os.NewSyscallError("SIOCAIFADDR", errno)
+		}
+		return nil
+	})
 
 	return err
 }
