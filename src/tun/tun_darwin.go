@@ -143,7 +143,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	}
 
 	//assign IPv4 stub
-	ip := [4]byte{169, 254, 10, 10}
+	ip := [4]byte{10, 10, 10, 10}
 	ifReq := ifAliasReq{
 		Addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
