@@ -26,17 +26,13 @@ go build -o mesh ./cmd/mesh
 ... or generate an iOS framework with:
 
 ```
-gomobile bind -target ios -tags mobile -o Mesh.framework \
-  github.com/RiV-chain/RiVPN/src/mobile \
-  github.com/RiV-chain/RiVPN/src/config
+./contrib/mobile/build -i
 ```
 
 ... or generate an Android AAR bundle with:
 
 ```
-gomobile bind -target android -tags mobile -o mesh.aar \
-  github.com/RiV-chain/RiVPN/src/mobile \
-  github.com/RiV-chain/RiVPN/src/config
+./contrib/mobile/build -a
 ```
 
 The main change from the old tunnel routing/CKR support in v0.3 is that you don't need to specify source subnets. Filtering will automatically be applied based on your remote subnets, therefore you'll need to specify the correct remote subnets on both sides.
