@@ -136,7 +136,7 @@ func (tun *TunAdapter) setupV4Routes() error {
 				return errors.New("invalid tun address TUN")
 			}
 			tun.log.Infoln("Added nexthop address:", ip.String())
-			luid.AddRoute(r.Prefix, ip, 0)
+			luid.AddRoute(r.Prefix, ip, 1)
 		}
 	} else {
 		return errors.New("unable to get native TUN")
@@ -153,7 +153,7 @@ func (tun *TunAdapter) setupV6Routes() error {
 				return errors.New("invalid tun address TUN")
 			}
 			tun.log.Infoln("Added nexthop address:", ip.String())
-			luid.AddRoute(r.Prefix, ip, 0)
+			luid.AddRoute(r.Prefix, ip, 1)
 		}
 	} else {
 		return errors.New("unable to get native TUN")
