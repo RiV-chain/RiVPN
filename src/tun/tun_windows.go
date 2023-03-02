@@ -122,9 +122,9 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 			ipv4Bytes[0] = 10
 			ipv4, ok := netip.AddrFromSlice(ipv4Bytes)
 			if !ok {
-				errors.New("Could not map IPv4 address from IPv6:", addr)
+				errors.New("Could not map IPv4 address from IPv6:" + addr)
 			}
-			addressesIPv4 := []netip.Prefix{ipv4}
+			addressesIPv4 := []netip.Prefix{netip.PrefixFrom(ipv4, 8)}
 			err = luid.SetIPAddressesForFamily(windows.AF_INET, addressesIPv4)
 			if err == windows.ERROR_OBJECT_ALREADY_EXISTS {
 				cleanupAddressesOnDisconnectedInterfaces(windows.AF_INET, addressesIPv4)
