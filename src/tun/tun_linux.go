@@ -62,6 +62,17 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	if err := netlink.AddrAdd(nlintf, nladdr); err != nil {
 		return err
 	}
+	ip := nladdr.IP.To16()
+	ip[0] = 10
+	ipv4 := net.IPv4(ip[0], ip[1], ip[2], ip[3])
+
+	addressIPv4, err := netlink.ParseAddr(ipv4.String() + "/8")
+	if err != nil {
+		tun.log.Errorf("Could not assign IPv4 address: %s", ipv4.String())
+	}
+	if err := netlink.AddrAdd(nlintf, addressIPv4); err != nil {
+		return err
+	}
 	if err := netlink.LinkSetMTU(nlintf, int(tun.mtu)); err != nil {
 		return err
 	}
