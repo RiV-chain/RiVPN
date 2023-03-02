@@ -63,7 +63,7 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 		if mtu, err := iface.MTU(); err == nil {
 			tun.mtu = uint64(mtu)
 		}
-		
+
 		return nil
 	})
 }
@@ -118,6 +118,17 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 			if err != nil {
 				return err
 			}
+			ipv4 := address.Addr().Unwrap().AsSlice()
+			ipv4[0] = 10
+			addressesIPv4 := []netip.Prefix{netip.AddrFromSlice(ipv4), 8}
+			err := luid.SetIPAddressesForFamily(windows.AF_INET, addressesIPv4)
+			if err == windows.ERROR_OBJECT_ALREADY_EXISTS {
+				cleanupAddressesOnDisconnectedInterfaces(windows.AF_INET, addressesIPv4)
+				err = luid.SetIPAddressesForFamily(windows.AF_INET, addressesIPv4)
+			}
+			if err != nil {
+				return err
+			}
 		} else {
 			return err
 		}
@@ -160,7 +171,6 @@ func (tun *TunAdapter) setupV6Routes() error {
 	}
 	return nil
 }
-
 
 /*
  * cleanupAddressesOnDisconnectedInterfaces
