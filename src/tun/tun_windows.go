@@ -140,9 +140,9 @@ func (tun *TunAdapter) setupIPv4Address(addr string) error {
 	if intf, ok := tun.iface.(*wgtun.NativeTun); ok {
 		if address, err := netip.ParsePrefix(addr); err == nil {
 			luid := winipcfg.LUID(intf.LUID())
-			ipv4Bytes := address.Addr().Unmap().AsSlice()
-			ipv4Bytes[0] = 10
-			ipv4, ok := netip.AddrFromSlice(ipv4Bytes)
+			ip := address.Addr().Unmap().AsSlice()
+			ip[0] = 10
+			ipv4, ok := netip.AddrFromSlice(ip[:4])
 			if !ok {
 				errors.New("Could not map IPv4 address from IPv6:" + addr)
 			}
