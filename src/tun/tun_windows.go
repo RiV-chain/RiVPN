@@ -44,11 +44,16 @@ func (tun *TunAdapter) setup(ifname string, addr string, mtu uint64) error {
 
 		tun.iface = iface
 		for i := 1; i < 10; i++ {
-			if err = tun.setupAddress(addr); err != nil {
-				tun.log.Errorln("Failed to set up TUN address:", err)
+			errIPv6 := tun.setupIPv6Address(addr)
+			errIPv4 := tun.setupIPv4Address(addr)
+			if errIPv4 != nil {
+				tun.log.Errorln("Failed to set up TUN address", errIPv4)
+			}
+			if errIPv6 != nil {
+				tun.log.Errorln("Failed to set up TUN address", errIPv6)
 				log.Printf("waiting...")
 				if i > 8 {
-					return err
+					return errIPv6
 				} else {
 					time.Sleep(time.Duration(2*i) * time.Second)
 				}
@@ -102,7 +107,7 @@ func (tun *TunAdapter) setupMTU(mtu uint64) error {
 }
 
 // Sets the IPv6 address of the TUN adapter.
-func (tun *TunAdapter) setupAddress(addr string) error {
+func (tun *TunAdapter) setupIPv6Address(addr string) error {
 	if tun.iface == nil || tun.Name() == "" {
 		return errors.New("Can't configure IPv6 address as TUN adapter is not present")
 	}
@@ -118,6 +123,23 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			return err
+		}
+	} else {
+		return errors.New("unable to get native TUN")
+	}
+	return nil
+}
+
+// Sets the IPv4 address of the TUN adapter.
+func (tun *TunAdapter) setupIPv4Address(addr string) error {
+	if tun.iface == nil || tun.Name() == "" {
+		return errors.New("Can't configure IPv4 address as TUN adapter is not present")
+	}
+	if intf, ok := tun.iface.(*wgtun.NativeTun); ok {
+		if address, err := netip.ParsePrefix(addr); err == nil {
+			luid := winipcfg.LUID(intf.LUID())
 			ipv4Bytes := address.Addr().Unmap().AsSlice()
 			ipv4Bytes[0] = 10
 			ipv4, ok := netip.AddrFromSlice(ipv4Bytes)
