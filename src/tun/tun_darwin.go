@@ -7,6 +7,7 @@ package tun
 
 import (
 	"encoding/binary"
+	"errors"
 	"golang.org/x/sys/unix"
 	"net"
 	"net/netip"
@@ -92,7 +93,7 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	var err error
 
 	address := &net.IPNet{
-		IP:   net.IP([4]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}),
+		IP:   net.IP([]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}),
 		Mask: net.CIDRMask(8, 32),
 	}
 
