@@ -98,12 +98,13 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	if err != nil {
 		return err
 	}
-
+	var ifra_name [unix.IFNAMSIZ]byte
+	copy(ifra_name[:], tun.Name())
 	// Second -----------------------------------------------------------------
 	//	Prepare the ioctl Request Argument
 	// ------------------------------------------------------------------------
 	ifra4 := aliasreq{
-		ifra_name: [16]byte(intf_name),
+		ifra_name: ifra_name,
 		ifra_addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
