@@ -99,7 +99,7 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 		return err
 	}
 	var ifra_name [unix.IFNAMSIZ]byte
-	copy(ifra_name[:], tun.Name())
+	copy(ifra_name[:], intf_name)
 	// Second -----------------------------------------------------------------
 	//	Prepare the ioctl Request Argument
 	// ------------------------------------------------------------------------
