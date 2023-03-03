@@ -13,7 +13,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	wgtun "golang.zx2c4.com/wireguard/tun"
@@ -86,14 +85,14 @@ type ifAliasReqInet4 struct {
 }
 
 // Implementation: Adds an IPv4 address to an interface.
-func addressAdd4(intf_name string, ipv4 [4]byte) error {
+func addressAdd4(intf_name string, ipv4 []byte) error {
 
 	var fd int
 	var ifReq *ifAliasReqInet4
 	var err error
 
 	address := &net.IPNet{
-		IP:   net.IP(ipv4),
+		IP:   net.IP([4]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}),
 		Mask: net.CIDRMask(8, 32),
 	}
 
@@ -179,20 +178,26 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
 		return err
 	}
-	var ip [4]byte
+
 	if address, errno := netip.ParsePrefix(addr); errno == nil {
 		ipv6 := address.Addr().Unmap().AsSlice()
-		ip[0] = 10
-		ip[1] = ipv6[1]
-		ip[2] = ipv6[2]
-		ip[3] = ipv6[3]
-		ip[3] = ip[3]>>1 + 1
-		addressAdd4(tun.Name(), ip)
+		ipv6[0] = 10
+		ipv6[3] = ipv6[3]>>1 + 1
+		addressAdd4(tun.Name(), ipv6[:4])
 	} else {
 		err = errno
 		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
 		return err
 	}
 	return nil
+}
 
+// Syscall wrapper for calling ioctl requests
+func ioctl(fd int, request int, argp uintptr) error {
+	_, _, errorp := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(request), argp)
+	if errorp == 0 {
+		return os.NewSyscallError("ioctl", nil)
+	} else {
+		return os.NewSyscallError("ioctl", errors.New(errorp.Error()))
+	}
 }
