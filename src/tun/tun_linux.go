@@ -64,7 +64,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 	}
 	ip := nladdr.IP.To16()
 	ip[0] = 10
-	ipv4 := net.IPv4(ip[0], ip[1], ip[2], ip[3])
+	ipv4 := net.IPv4(ip[0], ip[1], ip[2], ip[3]>>1+1)
 
 	addressIPv4, err := netlink.ParseAddr(ipv4.String() + "/8")
 	if err != nil {

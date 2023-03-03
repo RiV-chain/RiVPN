@@ -84,15 +84,6 @@ type ifAliasReq struct {
 	Mask    unix.RawSockaddrInet4
 }
 
-func useSocket(domain, typ, proto int, block func(socketFd int) error) error {
-	socketFd, err := unix.Socket(domain, typ, proto)
-	if err != nil {
-		return err
-	}
-	defer unix.Close(socketFd)
-	return block(socketFd)
-}
-
 // Sets the IPv6 address of the utun adapter. On Darwin/macOS this is done using
 // a system socket and making direct syscalls to the kernel.
 func (tun *TunAdapter) setupAddress(addr string) error {
@@ -141,9 +132,19 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		tun.log.Errorf("Error in darwin_SIOCAIFADDR_IN6: %v", errno)
 		return err
 	}
-
-	//assign IPv4 stub
-	ip := [4]byte{10, 10, 10, 10}
+	var ip [4]byte
+	if address, errno := netip.ParsePrefix(addr); errno == nil {
+		ipv6 := address.Addr().Unmap().AsSlice()
+		ip[0] = 10
+		ip[1] = ipv6[1]
+		ip[2] = ipv6[2]
+		ip[3] = ipv6[3]
+		ip[3] = ip[3]>>1 + 1
+	} else {
+		err = errno
+		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
+		return err
+	}
 	ifReq := ifAliasReq{
 		Addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
@@ -158,7 +159,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		Mask: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(16, 32)).String()).As4(),
+			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(8, 32)).String()).As4(),
 		},
 	}
 	copy(ifReq.Name[:], tun.Name())
@@ -167,17 +168,15 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
 		return err
 	}
-	err = useSocket(unix.AF_INET, unix.SOCK_DGRAM, 0, func(socketFd int) error {
-		if _, _, errno := unix.Syscall(
-			syscall.SYS_IOCTL,
-			uintptr(socketFd),
-			uintptr(unix.SIOCAIFADDR),
-			uintptr(unsafe.Pointer(&ifReq)),
-		); errno != 0 {
-			return os.NewSyscallError("SIOCAIFADDR", errno)
-		}
-		return nil
-	})
 
-	return err
+	if _, _, errno := unix.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		uintptr(unix.SIOCAIFADDR),
+		uintptr(unsafe.Pointer(&ifReq)),
+	); errno != 0 {
+		return os.NewSyscallError("SIOCAIFADDR", errno)
+	}
+	return nil
+
 }

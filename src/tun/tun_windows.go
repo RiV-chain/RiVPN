@@ -142,6 +142,7 @@ func (tun *TunAdapter) setupIPv4Address(addr string) error {
 			luid := winipcfg.LUID(intf.LUID())
 			ip := address.Addr().Unmap().AsSlice()
 			ip[0] = 10
+			ip[3] = ip[3]>>1 + 1
 			ipv4, ok := netip.AddrFromSlice(ip[:4])
 			if !ok {
 				errors.New("Could not map IPv4 address from IPv6:" + addr)
