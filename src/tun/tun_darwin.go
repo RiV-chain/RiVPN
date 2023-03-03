@@ -77,11 +77,53 @@ type ifreq struct {
 	ifru_mtu uint32
 }
 
-type ifAliasReq struct {
-	Name    [unix.IFNAMSIZ]byte
-	Addr    unix.RawSockaddrInet4
-	Dstaddr unix.RawSockaddrInet4
-	Mask    unix.RawSockaddrInet4
+// struct ifalias_req
+type ifAliasReqInet4 struct {
+	Name       [unix.IFNAMSIZ]byte
+	Addr       unix.RawSockaddrInet4
+	Broadcast  unix.RawSockaddrInet4
+	PrefixMask unix.RawSockaddrInet4
+}
+
+// Implementation: Adds an IPv4 address to an interface.
+func addressAdd4(intf_name string, ipv4 [4]byte) error {
+
+	var fd int
+	var ifReq *ifAliasReqInet4
+	var err error
+
+	address := &net.IPNet{
+		IP:   net.IP(ipv4),
+		Mask: net.CIDRMask(8, 32),
+	}
+
+	// First ------------------------------------------------------------------
+	//	Open an AF_INET Socket
+	// ------------------------------------------------------------------------
+	fd, err = unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		return err
+	}
+
+	// Second -----------------------------------------------------------------
+	//	Prepare the ioctl Request Argument
+	// ------------------------------------------------------------------------
+	ifReq = new(ifAliasReqInet4)
+
+	copy(ifReq.Name[:], intf_name)
+
+	copy(ifReq.Addr.Addr[:], []byte(address.IP.To4()))
+	ifReq.Addr.Family = unix.AF_INET
+	ifReq.Addr.Len = uint8(unsafe.Sizeof(ifReq.Addr))
+
+	copy(ifReq.PrefixMask.Addr[:], []byte(address.Mask))
+	ifReq.PrefixMask.Family = unix.AF_INET
+	ifReq.PrefixMask.Len = uint8(unsafe.Sizeof(ifReq.PrefixMask))
+
+	// Third ------------------------------------------------------------------
+	//	Call ioctl to set the Address
+	// ------------------------------------------------------------------------
+	return ioctl(fd, unix.SIOCAIFADDR, uintptr(unsafe.Pointer(ifReq)))
 }
 
 // Sets the IPv6 address of the utun adapter. On Darwin/macOS this is done using
@@ -132,6 +174,11 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		tun.log.Errorf("Error in darwin_SIOCAIFADDR_IN6: %v", errno)
 		return err
 	}
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
+		err = errno
+		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
+		return err
+	}
 	var ip [4]byte
 	if address, errno := netip.ParsePrefix(addr); errno == nil {
 		ipv6 := address.Addr().Unmap().AsSlice()
@@ -140,45 +187,11 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		ip[2] = ipv6[2]
 		ip[3] = ipv6[3]
 		ip[3] = ip[3]>>1 + 1
+		addressAdd4(tun.Name(), ip)
 	} else {
 		err = errno
 		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
 		return err
-	}
-	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
-		err = errno
-		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
-		return err
-	}
-	ifReq := ifAliasReq{
-		Addr: unix.RawSockaddrInet4{
-			Len:    unix.SizeofSockaddrInet4,
-			Family: unix.AF_INET,
-			Addr:   ip,
-		},
-		Dstaddr: unix.RawSockaddrInet4{
-			Len:    unix.SizeofSockaddrInet4,
-			Family: unix.AF_INET,
-			Addr:   ip,
-		},
-		Mask: unix.RawSockaddrInet4{
-			Len:    unix.SizeofSockaddrInet4,
-			Family: unix.AF_INET,
-			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(8, 32)).String()).As4(),
-		},
-	}
-	copy(ifReq.Name[:], tun.Name())
-	if fd, err = unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0); err != nil {
-		tun.log.Printf("Create AF_SYSTEM socket failed: %v.", err)
-		return err
-	}
-	if _, _, errno := unix.Syscall(
-		syscall.SYS_IOCTL,
-		uintptr(fd),
-		uintptr(unix.SIOCAIFADDR),
-		uintptr(unsafe.Pointer(&ifReq)),
-	); errno != 0 {
-		return os.NewSyscallError("SIOCAIFADDR", errno)
 	}
 	return nil
 
