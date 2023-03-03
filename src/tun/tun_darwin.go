@@ -145,6 +145,11 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
 		return err
 	}
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
+		err = errno
+		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
+		return err
+	}
 	ifReq := ifAliasReq{
 		Addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
@@ -163,12 +168,10 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		},
 	}
 	copy(ifReq.Name[:], tun.Name())
-	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCSIFMTU), uintptr(unsafe.Pointer(&ir))); errno != 0 {
-		err = errno
-		tun.log.Errorf("Error in SIOCSIFMTU: %v", errno)
+	if fd, err = unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0); err != nil {
+		tun.log.Printf("Create AF_SYSTEM socket failed: %v.", err)
 		return err
 	}
-
 	if _, _, errno := unix.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
