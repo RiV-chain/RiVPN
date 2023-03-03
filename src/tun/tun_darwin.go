@@ -79,7 +79,7 @@ type ifreq struct {
 type aliasreq struct {
 	ifra_name    [unix.IFNAMSIZ]byte
 	ifra_addr    unix.RawSockaddrInet4
-	ifra_dstaddr unix.RawSockaddrInet4
+	ifra_dstaddr unix.RawSockaddrInet4 // nolint:unused
 	ifra_mask    unix.RawSockaddrInet4
 }
 
@@ -109,11 +109,11 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 			Family: unix.AF_INET,
 			Addr:   ip,
 		},
-		ifra_dstaddr: unix.RawSockaddrInet4{
-			Len:    unix.SizeofSockaddrInet4,
-			Family: unix.AF_INET,
-			Addr:   ip,
-		},
+		//ifra_dstaddr: unix.RawSockaddrInet4{
+		//	Len:    unix.SizeofSockaddrInet4,
+		//	Family: unix.AF_INET,
+		//	Addr:   ip,
+		//},
 		ifra_mask: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
