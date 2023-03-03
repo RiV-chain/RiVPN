@@ -7,11 +7,9 @@ package tun
 
 import (
 	"encoding/binary"
-	"errors"
 	"golang.org/x/sys/unix"
 	"net"
 	"net/netip"
-	"os"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -89,14 +87,10 @@ type aliasreq struct {
 func addressAdd4(intf_name string, ipv4 []byte) error {
 
 	var fd int
-	var ifReq *ifAliasReqInet4
 	var err error
 
-	address := &net.IPNet{
-		IP:   net.IP([]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}),
-		Mask: net.CIDRMask(8, 32),
-	}
-
+	ip := []byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}
+	dst_ip := []byte{0, 0, 0, 0}
 	// First ------------------------------------------------------------------
 	//	Open an AF_INET Socket
 	// ------------------------------------------------------------------------
@@ -109,21 +103,21 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	//	Prepare the ioctl Request Argument
 	// ------------------------------------------------------------------------
 	ifra4 := aliasreq{
-		ifra_name: intf_name,
+		ifra_name: []byte(intf_name),
 		ifra_addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   address.IP.Addr().As4(),
+			Addr:   ip,
 		},
 		ifra_dstaddr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   address.IP.Addr().As4(),
+			Addr:   dst_ip,
 		},
 		ifra_mask: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   address.Mask.As4(),
+			Addr:   netip.MustParseAddr(net.IP(net.CIDRMask(8, 32)).String()).As4(),
 		},
 	}
 
