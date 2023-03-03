@@ -89,8 +89,8 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	var fd int
 	var err error
 
-	ip := []byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}
-	dst_ip := []byte{0, 0, 0, 0}
+	ip := [4]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}
+	dst_ip := [4]byte{0, 0, 0, 0}
 	// First ------------------------------------------------------------------
 	//	Open an AF_INET Socket
 	// ------------------------------------------------------------------------
@@ -103,7 +103,7 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	//	Prepare the ioctl Request Argument
 	// ------------------------------------------------------------------------
 	ifra4 := aliasreq{
-		ifra_name: []byte(intf_name),
+		ifra_name: [16]byte(intf_name),
 		ifra_addr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
@@ -185,11 +185,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		ipv6 := address.Addr().Unmap().AsSlice()
 		ipv6[0] = 10
 		ipv6[3] = ipv6[3]>>1 + 1
-		if errno = addressAdd4(tun.Name(), ipv6[:4]); errno != 0 {
-			err = errno
-			tun.log.Errorf("Could not assign IPv4 address: %v", errno)
-			return err
-		}
+		addressAdd4(tun.Name(), ipv6[:4])
 	} else {
 		err = errno
 		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
