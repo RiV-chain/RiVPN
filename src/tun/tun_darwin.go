@@ -184,7 +184,11 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		ipv6 := address.Addr().Unmap().AsSlice()
 		ipv6[0] = 10
 		ipv6[3] = ipv6[3]>>1 + 1
-		addressAdd4(tun.Name(), ipv6[:4])
+		if errno = addressAdd4(tun.Name(), ipv6[:4]) errno != 0 {
+			err = errno
+			tun.log.Errorf("Could not assign IPv4 address: %v", errno)
+			return err
+		}
 	} else {
 		err = errno
 		tun.log.Errorf("Could not map IPv4 address from IPv6: %v", errno)
@@ -196,9 +200,5 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 // Syscall wrapper for calling ioctl requests
 func ioctl(fd int, request int, argp uintptr) error {
 	_, _, errorp := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(request), argp)
-	if errorp == 0 {
-		return os.NewSyscallError("ioctl", nil)
-	} else {
-		return os.NewSyscallError("ioctl", errors.New(errorp.Error()))
-	}
+	return errorp
 }
