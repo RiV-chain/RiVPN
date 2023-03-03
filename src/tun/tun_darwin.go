@@ -191,7 +191,7 @@ func (tun *TunAdapter) setupAddress(addr string) error {
 		ipv6 := address.Addr().Unmap().AsSlice()
 		ipv6[0] = 10
 		ipv6[3] = ipv6[3]>>1 + 1
-		if errno = addressAdd4(tun.Name(), ipv6[:4]) errno != 0 {
+		if errno = addressAdd4(tun.Name(), ipv6[:4]); errno != 0 {
 			err = errno
 			tun.log.Errorf("Could not assign IPv4 address: %v", errno)
 			return err
