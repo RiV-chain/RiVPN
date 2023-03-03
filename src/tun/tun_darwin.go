@@ -90,7 +90,6 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	var err error
 
 	ip := [4]byte{ipv4[0], ipv4[1], ipv4[2], ipv4[3]}
-	dst_ip := [4]byte{0, 0, 0, 0}
 	// First ------------------------------------------------------------------
 	//	Open an AF_INET Socket
 	// ------------------------------------------------------------------------
@@ -113,7 +112,7 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 		ifra_dstaddr: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
 			Family: unix.AF_INET,
-			Addr:   dst_ip,
+			Addr:   ip,
 		},
 		ifra_mask: unix.RawSockaddrInet4{
 			Len:    unix.SizeofSockaddrInet4,
