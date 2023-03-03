@@ -78,11 +78,11 @@ type ifreq struct {
 }
 
 // struct ifalias_req
-type ifAliasReqInet4 struct {
-	Name       [unix.IFNAMSIZ]byte
-	Addr       unix.RawSockaddrInet4
-	Broadcast  unix.RawSockaddrInet4
-	PrefixMask unix.RawSockaddrInet4
+type aliasreq struct {
+	ifra_name    [unix.IFNAMSIZ]byte
+	ifra_addr    unix.RawSockaddrInet4
+	ifra_dstaddr unix.RawSockaddrInet4
+	ifra_mask    unix.RawSockaddrInet4
 }
 
 // Implementation: Adds an IPv4 address to an interface.
@@ -108,22 +108,29 @@ func addressAdd4(intf_name string, ipv4 []byte) error {
 	// Second -----------------------------------------------------------------
 	//	Prepare the ioctl Request Argument
 	// ------------------------------------------------------------------------
-	ifReq = new(ifAliasReqInet4)
-
-	copy(ifReq.Name[:], intf_name)
-
-	copy(ifReq.Addr.Addr[:], []byte(address.IP.To4()))
-	ifReq.Addr.Family = unix.AF_INET
-	ifReq.Addr.Len = uint8(unsafe.Sizeof(ifReq.Addr))
-
-	copy(ifReq.PrefixMask.Addr[:], []byte(address.Mask))
-	ifReq.PrefixMask.Family = unix.AF_INET
-	ifReq.PrefixMask.Len = uint8(unsafe.Sizeof(ifReq.PrefixMask))
+	ifra4 := aliasreq{
+		ifra_name: intf_name,
+		ifra_addr: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   address.IP.Addr().As4(),
+		},
+		ifra_dstaddr: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   address.IP.Addr().As4(),
+		},
+		ifra_mask: unix.RawSockaddrInet4{
+			Len:    unix.SizeofSockaddrInet4,
+			Family: unix.AF_INET,
+			Addr:   address.Mask.As4(),
+		},
+	}
 
 	// Third ------------------------------------------------------------------
 	//	Call ioctl to set the Address
 	// ------------------------------------------------------------------------
-	return ioctl(fd, unix.SIOCAIFADDR, uintptr(unsafe.Pointer(ifReq)))
+	return ioctl(fd, unix.SIOCAIFADDR, uintptr(unsafe.Pointer(&ifra4)))
 }
 
 // Sets the IPv6 address of the utun adapter. On Darwin/macOS this is done using
