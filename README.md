@@ -17,6 +17,8 @@ FeaturesConfig:
 }
 ```
 
+See [manual](https://github.com/RiV-chain/RiVPN/wiki/Settings-for-RiVPN-to-access-the-Internet-from-a-remote-server) for internet connection sharing through a remote server.
+
 Then use Go 1.18 to build and run:
 ```
 go build -o mesh ./cmd/mesh
