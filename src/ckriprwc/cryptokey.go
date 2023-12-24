@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gologme/log"
 
@@ -43,19 +44,28 @@ func (c *cryptokey) configure() error {
 	c.v4Routes = make([]*route, 0, len(c.config.IPv4RemoteSubnets))
 	c.v6Routes = make([]*route, 0, len(c.config.IPv6RemoteSubnets))
 	c.Unlock()
-
-	for ipv6, pubkey := range c.config.IPv6RemoteSubnets {
-		if err := c.addRemoteSubnet(ipv6, pubkey); err != nil {
-			return fmt.Errorf("Error adding routed IPv6 subnet: %w", err)
+	i := 0
+	for {
+		if len(c.core.GetPeers()) > 0 {
+			for ipv6, pubkey := range c.config.IPv6RemoteSubnets {
+				if err := c.addRemoteSubnet(ipv6, pubkey); err != nil {
+					return fmt.Errorf("Error adding routed IPv6 subnet: %w", err)
+				}
+			}
+			for ipv4, pubkey := range c.config.IPv4RemoteSubnets {
+				if err := c.addRemoteSubnet(ipv4, pubkey); err != nil {
+					return fmt.Errorf("Error adding routed IPv4 subnet: %w", err)
+				}
+			}
+			break
+		} else {
+			i++
+			if i > 10 {
+				return fmt.Errorf("No peers has been added")
+			}
+			time.Sleep(6 * time.Second)
 		}
 	}
-
-	for ipv4, pubkey := range c.config.IPv4RemoteSubnets {
-		if err := c.addRemoteSubnet(ipv4, pubkey); err != nil {
-			return fmt.Errorf("Error adding routed IPv4 subnet: %w", err)
-		}
-	}
-
 	return nil
 }
 
